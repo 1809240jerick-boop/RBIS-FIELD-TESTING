@@ -7,415 +7,400 @@
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
-    <meta name="theme-color" content="#0a3d62">
+    <meta name="theme-color" content="#0f172a">
     <meta name="application-name" content="RBI System">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-          .then((reg) => {
-             console.log('Service Worker Registered');
-          })
-          .catch(err => console.log('SW Registration failed', err));
+        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail', err));
       }
     </script>
 
     <style>
-        /* HARD RESET & MOBILE STYLES */
-        *, *::before, *::after { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', sans-serif; background: #eef1f5; -webkit-tap-highlight-color: transparent; }
-
-        /* SECURITY OVERLAY */
-        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a3d62; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
-        .login-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 85%; max-width: 350px; color: #333; text-align: center; }
-
-        /* VIEWER MODAL */
-        #viewer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: flex-end; }
-        .viewer-card { background: #fff; width: 100%; max-width: 500px; height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; position: relative; animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .app {
-            max-width: 450px; 
-            margin: 0 auto;
-            background: #ffffff;
-            min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        /* --- MODERN DESIGN VARIABLES --- */
+        :root {
+            --primary: #0f172a;       /* Slate 900 */
+            --accent: #3b82f6;        /* Blue 500 */
+            --accent-hover: #2563eb;  /* Blue 600 */
+            --bg: #f1f5f9;            /* Slate 100 */
+            --card: #ffffff;
+            --text-main: #334155;     /* Slate 700 */
+            --text-light: #64748b;    /* Slate 500 */
+            --danger: #ef4444;        /* Red 500 */
+            --success: #22c55e;       /* Green 500 */
+            --warning: #f59e0b;       /* Amber 500 */
         }
 
-        header {
-            background: #0a3d62;
-            color: #ffffff;
-            padding: 16px;
-            text-align: center;
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; height: 100%; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-main); -webkit-tap-highlight-color: transparent; }
+
+        /* --- GLOBAL PUROK CONTEXT BAR --- */
+        .context-bar {
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 900;
         }
-
-        /* TABS STYLING */
-        .tab-container {
-            display: flex;
-            background: #0a3d62;
-            padding-bottom: 10px;
-        }
-        .tab-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: rgba(255,255,255,0.6);
-            padding: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-        }
-        .tab-btn.active {
-            color: white;
-            border-bottom: 3px solid #1e90ff;
-        }
-
-        h3 { margin: 0; font-size: 18px; }
-        small { opacity: 0.8; font-size: 12px; }
-
-        .section { padding: 16px; border-bottom: 8px solid #f0f2f5; }
-
-        .form-group { width: 100%; margin-bottom: 14px; }
-
-        label {
-            display: block;
+        .context-info h4 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+        .context-info small { opacity: 0.7; font-size: 11px; }
+        
+        .purok-selector-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
             font-size: 13px;
-            font-weight: 600;
-            color: #444;
-            margin-bottom: 6px;
-        }
-        .req { color: red; margin-left: 3px; } /* Asterisk for required */
-
-        input, select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            font-size: 15px;
-            background: #fff;
-        }
-
-        input:focus, select:focus { border-color: #0a3d62; outline: none; }
-
-        button {
-            width: 100%;
-            padding: 14px;
-            border-radius: 8px;
-            border: none;
-            font-size: 15px;
-            font-weight: 600;
-            margin-top: 8px;
-            background: #1e90ff;
-            color: #fff;
             cursor: pointer;
+            transition: 0.2s;
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 8px;
         }
-        button:active { transform: scale(0.98); }
+        .purok-selector-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.98); }
+        .purok-badge { background: var(--warning); color: #000; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 12px; }
 
-        /* Button Colors */
-        button.secondary { background: #27ae60; } /* Excel Green */
-        button.danger { background: #e74c3c; } 
-        button.close-btn { background: #e74c3c; margin-bottom: 20px; } 
-        button.edit-btn { background: #f39c12; margin-bottom: 10px; color: white; } 
-        button.add-small { width: auto; padding: 8px 15px; font-size: 12px; margin-top: 0; }
+        /* --- LAYOUT & TABS --- */
+        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 60px; }
 
-        /* SCROLLABLE LIST - Showing approx 4 records */
-        .list { margin-top: 10px; max-height: 280px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 8px; }
-
-        .card {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
+        .tab-nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 60px; z-index: 800; }
+        .tab-btn {
+            flex: 1; border: none; background: none; padding: 15px;
+            font-size: 13px; font-weight: 600; color: var(--text-light);
+            cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s;
         }
-        .card:active { background: #f9f9f9; }
-        .card span { font-weight: 500; }
-        .card small { color: #888; }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-btn i { margin-right: 5px; }
 
-        .detail-row { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .detail-label { font-size: 11px; color: #888; text-transform: uppercase; display: block; }
-        .detail-val { font-size: 14px; font-weight: 600; color: #333; }
+        .content-area { padding: 20px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* SECTORAL TOGGLES GRID */
-        .sector-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .toggle-item {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .toggle-item label { margin: 0; font-size: 12px; cursor: pointer; }
-        .toggle-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #0a3d62; }
-
-        /* CONFIG LIST ITEMS */
-        .config-item {
-            display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;
-        }
-
-        footer {
-            text-align: center;
-            font-size: 12px;
+        /* --- FORM ELEMENTS --- */
+        .card-section {
+            background: var(--card);
             padding: 20px;
-            color: #666;
-            background: #f8f9fa;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            color: var(--primary); font-size: 15px; font-weight: 700;
+            border-left: 4px solid var(--accent); padding-left: 10px; margin: 0 0 15px 0;
+            text-transform: uppercase;
         }
 
-        /* Utility to hide/show tabs */
-        .hidden-tab { display: none; }
+        .form-group { margin-bottom: 15px; position: relative; }
+        label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .req { color: var(--danger); margin-left: 2px; }
+
+        /* ALL INPUTS CAPS */
+        input, select {
+            width: 100%; padding: 12px 14px;
+            border-radius: 8px; border: 1px solid #cbd5e1;
+            font-size: 14px; background: #f8fafc; color: #1e293b;
+            transition: 0.2s;
+            text-transform: uppercase; /* VISUAL CAPS */
+        }
+        input:focus, select:focus { border-color: var(--accent); background: white; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        input::placeholder { text-transform: none; opacity: 0.6; }
+
+        /* BUTTONS */
+        .btn {
+            width: 100%; padding: 14px; border-radius: 10px; border: none;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-ghost { background: #e2e8f0; color: var(--text-main); }
+
+        /* SECTOR GRID */
+        .sector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .toggle-card {
+            background: #fff; border: 1px solid #e2e8f0; padding: 12px;
+            border-radius: 8px; display: flex; align-items: center; justify-content: space-between;
+        }
+        .toggle-card label { margin: 0; cursor: pointer; color: var(--text-main); }
+        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+        /* CUSTOM MODAL & WARNING */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+            z-index: 2000; display: none; align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background: white; width: 85%; max-width: 320px;
+            border-radius: 16px; padding: 24px; text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* LIST STYLES */
+        .record-card {
+            background: white; border-radius: 12px; padding: 15px;
+            margin-bottom: 10px; border: 1px solid #e2e8f0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .record-card h5 { margin: 0; font-size: 15px; color: var(--primary); }
+        .record-card p { margin: 2px 0 0; font-size: 12px; color: var(--text-light); }
+
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div id="login-overlay">
-    <div class="login-box">
-        <h4 style="margin-top:0; color:#0a3d62;">SECURITY CHECK</h4>
-        <p style="font-size:12px; color:#666; margin-bottom:15px;" id="login-msg">Enter Your Password</p>
-        
-        <input type="password" id="login-pass" 
-               style="text-align:center; margin-bottom:10px;" 
-               placeholder="Password"
-               onkeydown="if(event.key === 'Enter') attemptLogin()">
-               
-        <button onclick="attemptLogin()">LOGIN</button>
-        
-        <div style="margin-top:10px; font-size:11px; cursor:pointer; color:#1e90ff;" onclick="forgotPassword()">Forgot Password?</div>
+<div id="login-overlay" class="modal-overlay" style="display:flex; z-index:9999;">
+    <div class="modal-box">
+        <div style="color:var(--primary); font-size:40px; margin-bottom:10px;"><i class="fas fa-shield-alt"></i></div>
+        <h3 style="margin:0; color:var(--primary);">SECURITY CHECK</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:20px;" id="login-msg">Enter System Password</p>
+        <input type="password" id="login-pass" style="text-align:center; margin-bottom:15px;" placeholder="PASSWORD">
+        <button class="btn btn-primary" onclick="attemptLogin()">UNLOCK SYSTEM</button>
+        <div style="margin-top:15px; font-size:11px; cursor:pointer; color:var(--accent);" onclick="forgotPassword()">Reset Password</div>
     </div>
 </div>
 
-<div class="app">
-<header>
-    <h3>RBI System</h3>
-    <small>Barangay Inhabitant Registration</small>
-</header>
-
-<div class="tab-container">
-    <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg">FORM</button>
-    <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec">RECORDS</button>
-    <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf">CONFIG</button>
+<div id="purok-warning-modal" class="modal-overlay">
+    <div class="modal-box">
+        <div style="color:var(--warning); font-size:40px; margin-bottom:10px;"><i class="fas fa-exclamation-triangle"></i></div>
+        <h3 style="margin:0;">CHANGE ACTIVE PUROK?</h3>
+        <p style="font-size:13px; color:#666; margin: 10px 0 20px 0;">
+            This will change the Purok assignment for <b>ALL NEW ENTRIES</b>.<br>
+            Current: <b id="warn-curr"></b> → New: <b id="warn-new"></b>
+        </p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-ghost" onclick="cancelPurokChange()">CANCEL</button>
+            <button class="btn btn-primary" onclick="confirmPurokChange()">CONFIRM</button>
+        </div>
+    </div>
 </div>
 
-<div id="tab-registration">
-    <div class="section">
-        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">I. Personal Information</h4>
-        
-        <div class="form-group"><label>Inhabitant Type<span class="req">*</span></label><select id="inhabitantType"><option>NON-MIGRANT</option><option>MIGRANT</option><option>TRANSIENT</option></select></div>
-        
-        <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="e.g. Dela Cruz"></div>
-        <div class="form-group"><label>First Name<span class="req">*</span></label><input id="firstName" placeholder="e.g. Juan"></div>
-        <div class="form-group"><label>Middle Name<span class="req">*</span></label><input id="middleName"></div>
-        <div class="form-group"><label>Suffix</label><input id="suffix" placeholder="e.g. Jr, III (Optional)"></div>
-        <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
-        <div class="form-group"><label>Birthday<span class="req">*</span></label><input type="date" id="birthDate"></div>
-        <div class="form-group"><label>Sex<span class="req">*</span></label><select id="sex"><option>MALE</option><option>FEMALE</option></select></div>
-        
-        <div class="form-group"><label>Civil Status<span class="req">*</span></label><select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select></div>
-        <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
+<div class="app-container">
 
-        <div class="form-group">
-            <label>Religion<span class="req">*</span></label>
-            <select id="religionSelect" onchange="checkReligion()">
-                <option value="ROMAN CATHOLIC">ROMAN CATHOLIC</option>
-                <option value="IGLESIA NI CRISTO">IGLESIA NI CRISTO</option>
-                <option value="ISLAM">ISLAM</option>
-                <option value="EVANGELICALS">EVANGELICALS</option>
-                <option value="BAPTIST">BAPTIST</option>
-                <option value="SEVENTH DAY ADVENTIST">SEVENTH DAY ADVENTIST</option>
-                <option value="AGLIPAYAN">AGLIPAYAN</option>
-                <option value="JEHOVAH'S WITNESS">JEHOVAH'S WITNESS</option>
-                <option value="OTHERS">OTHERS (PLEASE SPECIFY)</option>
-            </select>
-            <input id="religionOther" placeholder="Type Religion Here..." style="display:none; margin-top:5px; border-color:#1e90ff;">
+    <div class="context-bar">
+        <div class="context-info">
+            <h4>RBI SYSTEM</h4>
+            <small>SEC JERICK™</small>
         </div>
-
-        <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
-    </div>
-
-    <div class="section">
-        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">II. Address Details</h4>
-        <div class="form-group">
-            <label>Purok / Zone (1-<span id="lbl-max-purok"></span>)<span class="req">*</span></label>
-            <select id="addressPurok"></select>
-        </div>
-        <div class="form-group">
-            <label>Sitio<span class="req">*</span></label>
-            <select id="addressSitio"><option value="">Select Sitio...</option></select>
-        </div>
-        <div class="form-group">
-            <label>Street Name</label>
-            <select id="addressStreet"><option value="">Select Street (Optional)...</option></select>
+        <div class="purok-selector-btn" onclick="openPurokSelector()">
+            <span>ACTIVE PUROK</span>
+            <span class="purok-badge" id="globalPurokDisplay">1</span>
+            <i class="fas fa-chevron-down" style="font-size:10px;"></i>
         </div>
     </div>
 
-    <div class="section">
-        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">III. Sectoral & Contact</h4>
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg"><i class="fas fa-user-plus"></i> FORM</button>
+        <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec"><i class="fas fa-list"></i> RECORDS</button>
+        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> SETTINGS</button>
+    </div>
+
+    <div id="tab-registration" class="content-area">
         
-        <label style="margin-bottom:10px;">Sectoral Group Membership:</label>
-        <div class="sector-grid">
-            <div class="toggle-item"><label for="isOSY">OSY</label><input type="checkbox" id="isOSY"></div>
-            <div class="toggle-item"><label for="isPWD">PWD</label><input type="checkbox" id="isPWD"></div>
-            <div class="toggle-item"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
-            <div class="toggle-item"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
-            <div class="toggle-item"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
+        <div id="edit-banner" style="background:var(--warning); color:white; padding:10px; border-radius:8px; margin-bottom:15px; display:none; text-align:center; font-size:13px; font-weight:bold;">
+            <i class="fas fa-edit"></i> EDITING RECORD - PUROK <span id="edit-purok-indicator"></span>
         </div>
 
-        <div class="form-group"><label>Contact Number (Optional)</label><input id="contact" type="tel"></div>
-        <div class="form-group"><label>Email Address (Optional)</label><input id="email" type="email"></div>
-        
-        <div class="form-group"><label>Educational Attainment<span class="req">*</span></label>
-            <select id="education">
-                <option>NONE</option>
-                <option>ELEMENTARY LEVEL</option>
-                <option>ELEMENTARY GRADUATE</option>
-                <option>HIGH SCHOOL LEVEL</option>
-                <option>HIGH SCHOOL GRADUATE</option>
-                <option>SENIOR HIGH SCHOOL LEVEL</option>
-                <option>SENIOR HIGH SCHOOL GRADUATE</option>
-                <option>COLLEGE LEVEL</option>
-                <option>COLLEGE GRADUATE</option>
-                <option>VOCATIONAL</option>
-                <option>POST GRADUATE</option>
-            </select>
-        </div>
-        
-        <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
-            <label style="color:#0a3d62;">Mother's Maiden Name<span class="req">*</span></label>
+        <div class="card-section">
+            <h5 class="section-title">1. PERSONAL DATA</h5>
             
-            <div class="form-group" style="background:#f0f8ff; padding:10px; border-radius:8px; border:1px solid #bde0ff;">
-               <label style="color:#1e90ff; margin-bottom:4px; font-size:11px;">AUTO-FILL FROM RECORDED MOTHERS</label>
-               <input id="motherSearch" list="motherList" onchange="autoFillMother(this)" placeholder="Search Mother's Name..." style="border:1px solid #1e90ff;">
+            <div class="form-group">
+                <label>Inhabitant Type<span class="req">*</span></label>
+                <select id="inhabitantType">
+                    <option>NON-MIGRANT</option>
+                    <option>MIGRANT</option>
+                    <option>TRANSIENT</option>
+                </select>
+            </div>
+
+            <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="DELA CRUZ"></div>
+            <div class="form-group"><label>First Name<span class="req">*</span></label><input id="firstName" placeholder="JUAN"></div>
+            <div class="form-group"><label>Middle Name</label><input id="middleName" placeholder="(OPTIONAL)"></div>
+            <div class="form-group"><label>Suffix</label><input id="suffix" placeholder="JR, III (OPTIONAL)"></div>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div class="form-group"><label>Birthday<span class="req">*</span></label><input type="date" id="birthDate"></div>
+                <div class="form-group"><label>Sex<span class="req">*</span></label><select id="sex"><option>MALE</option><option>FEMALE</option></select></div>
+            </div>
+
+            <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
+            
+            <div class="form-group"><label>Civil Status<span class="req">*</span></label>
+                <select id="civilStatus">
+                    <option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option>
+                </select>
+            </div>
+            
+            <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
+
+            <div class="form-group">
+                <label>Religion (Select/Type Other)<span class="req">*</span></label>
+                <select id="religionSelect" onchange="checkReligion()">
+                    <option value="ROMAN CATHOLIC">ROMAN CATHOLIC</option>
+                    <option value="IGLESIA NI CRISTO">IGLESIA NI CRISTO</option>
+                    <option value="ISLAM">ISLAM</option>
+                    <option value="EVANGELICALS">EVANGELICALS</option>
+                    <option value="BAPTIST">BAPTIST</option>
+                    <option value="SEVENTH DAY ADVENTIST">SEVENTH DAY ADVENTIST</option>
+                    <option value="AGLIPAYAN">AGLIPAYAN</option>
+                    <option value="JEHOVAH'S WITNESS">JEHOVAH'S WITNESS</option>
+                    <option value="OTHERS">OTHERS (PLEASE SPECIFY)</option>
+                </select>
+                <input id="religionOther" placeholder="TYPE RELIGION HERE..." style="display:none; margin-top:5px; border-color:var(--accent);">
+            </div>
+            
+            <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
+        </div>
+
+        <div class="card-section">
+            <h5 class="section-title">2. ADDRESS & EDUCATION</h5>
+            
+            <div class="form-group">
+                <label>Additional Address Details / Landmark</label>
+                <input id="addressDetails" placeholder="HOUSE NO., STREET NAME, OR LANDMARK">
+            </div>
+
+            <div class="form-group"><label>Educational Attainment</label>
+                <select id="education">
+                    <option>NONE</option>
+                    <option>ELEMENTARY LEVEL</option>
+                    <option>ELEMENTARY GRADUATE</option>
+                    <option>HIGH SCHOOL LEVEL</option>
+                    <option>HIGH SCHOOL GRADUATE</option>
+                    <option>SENIOR HIGH SCHOOL LEVEL</option>
+                    <option>SENIOR HIGH SCHOOL GRADUATE</option>
+                    <option>COLLEGE LEVEL</option>
+                    <option>COLLEGE GRADUATE</option>
+                    <option>VOCATIONAL</option>
+                    <option>POST GRADUATE</option>
+                </select>
+            </div>
+
+            <div class="form-group"><label>Contact Number</label><input id="contact" type="tel"></div>
+        </div>
+
+        <div class="card-section">
+            <h5 class="section-title">3. SECTORAL MEMBERSHIP</h5>
+            <div class="sector-grid">
+                <div class="toggle-card"><label for="isOSY">OSY</label><input type="checkbox" id="isOSY"></div>
+                <div class="toggle-card"><label for="isPWD">PWD</label><input type="checkbox" id="isPWD"></div>
+                <div class="toggle-card"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
+                <div class="toggle-card"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
+                <div class="toggle-card"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
+            </div>
+        </div>
+
+        <div class="card-section" style="background:#f8fafc; border:1px dashed #cbd5e1;">
+            <h5 class="section-title" style="border-left-color:var(--primary);">4. MOTHER'S MAIDEN NAME</h5>
+            
+            <div class="form-group">
+               <input id="motherSearch" list="motherList" onchange="autoFillMother(this)" placeholder="SEARCH EXISTING MOTHERS..." style="border-color:var(--accent);">
                <datalist id="motherList"></datalist>
             </div>
 
-            <div class="form-group"><input id="mFirst" placeholder="Mother's First Name"></div>
-            <div class="form-group"><input id="mMiddle" placeholder="Mother's Middle Name"></div>
-            <div class="form-group"><input id="mLast" placeholder="Mother's Last Name"></div>
+            <div class="form-group"><input id="mFirst" placeholder="MOTHER'S FIRST NAME"></div>
+            <div class="form-group"><input id="mMiddle" placeholder="MOTHER'S MIDDLE NAME"></div>
+            <div class="form-group"><input id="mLast" placeholder="MOTHER'S LAST NAME"></div>
         </div>
 
-        <div style="display:flex; gap:10px;">
-            <button id="btn-cancel" onclick="cancelEdit()" style="display:none; background:#e74c3c; width:40%;">CANCEL</button>
-            <button id="btn-save" onclick="saveRecord()">SAVE RECORD</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button id="btn-cancel" class="btn btn-danger" onclick="cancelEdit()" style="display:none;">CANCEL EDIT</button>
+            <button id="btn-save" class="btn btn-primary" onclick="saveRecord()"><i class="fas fa-save"></i> SAVE RECORD</button>
         </div>
     </div>
-</div>
 
-<div id="tab-records" class="hidden-tab">
-    <div class="section">
+    <div id="tab-records" class="content-area hidden">
         <div class="form-group">
-            <label>Search Records (Last or First Name)</label>
-            <input id="searchBox" oninput="renderList()" placeholder="Type Name to search...">
+            <input id="searchBox" oninput="renderList()" placeholder="SEARCH BY NAME..." style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         </div>
-        <div class="list" id="resultList"></div>
-    </div>
-
-    <div class="section">
-        <label>Export Data</label>
-        <p style="font-size:12px; color:#666; margin-bottom:10px;">
-            Downloads BIMS compatible file (Sheet 1: Instructions, Sheet 2: Data).
-        </p>
-        <button class="secondary" onclick="exportExcel()">Export Excel File</button>
-    </div>
-</div>
-
-<div id="tab-config" class="hidden-tab">
-    <div class="section">
-        <h4 style="color:#0a3d62; margin-top:0;">System Configuration</h4>
-        <p style="font-size:12px; color:#666;">Set up your Barangay's geography data here.</p>
+        <div id="resultList" style="margin-top:15px;"></div>
         
-        <div class="form-group">
-            <label>Max Purok Number (1-N)</label>
-            <input type="number" id="confPurok" placeholder="Default: 10">
-            <button class="add-small" onclick="savePurokConf()">Set Purok Max</button>
-        </div>
-
-        <div class="form-group" style="margin-top:20px;">
-            <label>Manage Sitios</label>
-            <div style="display:flex; gap:5px;">
-                <input id="newSitio" placeholder="Enter Sitio Name">
-                <button class="add-small" onclick="addItem('sitios', 'newSitio')">Add</button>
-            </div>
-            <div class="list" id="listSitios" style="max-height:150px;"></div>
-        </div>
-
-        <div class="form-group" style="margin-top:20px;">
-            <label>Manage Streets</label>
-            <div style="display:flex; gap:5px;">
-                <input id="newStreet" placeholder="Enter Street Name">
-                <button class="add-small" onclick="addItem('streets', 'newStreet')">Add</button>
-            </div>
-            <div class="list" id="listStreets" style="max-height:150px;"></div>
+        <div class="card-section" style="margin-top:20px; text-align:center;">
+            <p style="font-size:12px; margin-bottom:10px;">Export data compatible with BIMS</p>
+            <button class="btn btn-success" onclick="exportExcel()"><i class="fas fa-file-excel"></i> EXPORT TO EXCEL</button>
         </div>
     </div>
+
+    <div id="tab-config" class="content-area hidden">
+        <div class="card-section">
+            <h5 class="section-title">SYSTEM CONFIGURATION</h5>
+            
+            <div class="form-group">
+                <label>Set Maximum Purok Number</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="confPurok" placeholder="Default: 10">
+                    <button class="btn btn-primary" style="width:auto;" onclick="savePurokConf()">UPDATE</button>
+                </div>
+                <small>Current Max: <span id="lbl-max-purok"></span></small>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+            
+            <div class="form-group">
+                 <label>Admin Password Management</label>
+                 <button class="btn btn-ghost" onclick="forgotPassword()">Reset Admin Password</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<footer>© SEC JERICK™ | Modern RBI System (For Field Use)</footer>
-</div>
+<input type="hidden" id="tempPurokTarget">
 
-<div id="viewer-overlay" onclick="if(event.target===this) closeViewer()">
-    <div class="viewer-card">
-        <h3 style="color:#0a3d62; border-bottom:2px solid #1e90ff; padding-bottom:10px; margin-bottom:15px;">Record Details</h3>
+<div id="viewer-overlay" class="modal-overlay" onclick="if(event.target===this) closeViewer()">
+    <div class="viewer-card" style="background:white; width:100%; max-width:500px; height:90vh; border-radius:20px 20px 0 0; position:absolute; bottom:0; padding:20px; overflow-y:auto; animation: slideUp 0.3s;">
+        <h3 style="color:var(--primary); border-bottom:2px solid var(--accent); padding-bottom:10px; margin-bottom:15px;">RECORD DETAILS</h3>
         <div id="viewer-content"></div>
-        <div id="viewer-actions" style="margin-top:20px;"></div>
+        <div id="viewer-actions" style="margin-top:20px; display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 </div>
+
+<style> @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } </style>
 
 <script>
 // --- CONFIGURATION ---
-// Extended Headers to include new fields
 const HEADERS = [
     "INHABITANT TYPE", "LAST NAME", "FIRST NAME", "MIDDLE NAME", "SUFFIX", 
     "BIRTH PLACE", "BIRTHDATE (YYYY-MM-DD)", "SEX", "CIVIL STATUS", "CITIZENSHIP", 
     "PROFESSION/ OCCUPATION", "CONTACT NUMBER", "EMAIL ADDRESS", 
     "HIGHEST EDUCATIONAL ATTAINMENT", "MOTHER'S FIRST NAME", 
     "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME",
-    "PUROK", "SITIO", "STREET", "RELIGION",
+    "PUROK", "ADDITIONAL ADDRESS", "RELIGION", // MODIFIED
     "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
 ];
 
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
-// Extended settings object default
 let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
     custom_password: '', 
-    purok_max: 10,
-    sitios: [],
-    streets: [] 
+    purok_max: 10
 };
+
+// Global State
+let currentGlobalPurok = localStorage.getItem('globalPurok') || "1";
 let editingIndex = -1; 
 
 // --- SECURITY LOGIC ---
 function getDynamicPassword() {
     const now = new Date();
-    const m = now.getMonth();
-    const d = now.getDate();
     const y = now.getFullYear();
     const onejan = new Date(y, 0, 1);
     const w = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-    return `RBI-${m}${d}${y}${w*2}`;
+    return `RBI-${now.getMonth()}${now.getDate()}${y}${w*2}`;
 }
 
 window.onload = function() {
@@ -423,89 +408,81 @@ window.onload = function() {
         document.getElementById('login-msg').innerText = "Create Your Password to Start";
     }
     updateMotherDatalist(); 
-    loadConfigUI(); // Load Dropdowns
-    renderConfigLists(); // Load Config Tab Lists
+    loadConfigUI();
+    updateGlobalPurokUI();
 }
 
 function attemptLogin() {
     const input = document.getElementById('login-pass').value;
-    
     if (!settings.custom_password) {
         if(input.trim().length > 0) {
             settings.custom_password = input.trim();
             saveSettings();
-            alert("Password Set! You are now logged in.");
+            alert("Password Set! Logged in.");
             document.getElementById('login-overlay').style.display = 'none';
-        } else {
-            alert("Please create a password.");
-        }
+        } else alert("Create a password.");
         return;
     }
-
     if (input === settings.custom_password) {
         document.getElementById('login-overlay').style.display = 'none';
-    } else {
-        alert("Incorrect Password.");
-    }
+    } else alert("Incorrect Password.");
 }
 
 function forgotPassword() {
-    alert("Please contact SEC JERICK for the Admin Password.");
     const input = prompt("Enter Dynamic Admin Password:");
-    
     if(input === getDynamicPassword()) {
-        const newPass = prompt("Admin Code Correct. Enter your NEW Password:");
+        const newPass = prompt("Admin Code Correct. Enter NEW Password:");
         if(newPass && newPass.trim().length > 0) { 
             settings.custom_password = newPass.trim(); 
             saveSettings(); 
             alert("Password Reset Successfully."); 
         }
-    } else {
-        if(input) alert("Invalid Dynamic Code.");
+    } else if(input) alert("Invalid Code.");
+}
+
+function saveSettings() { localStorage.setItem('rbi_settings', JSON.stringify(settings)); }
+
+// --- GLOBAL PUROK LOGIC ---
+function updateGlobalPurokUI() {
+    document.getElementById('globalPurokDisplay').innerText = currentGlobalPurok;
+    localStorage.setItem('globalPurok', currentGlobalPurok);
+}
+
+function openPurokSelector() {
+    // Generate options based on max purok
+    const max = settings.purok_max || 10;
+    let opts = "";
+    for(let i=1; i<=max; i++) opts += i + ",";
+    
+    // Simple prompt is not enough, we need the modal logic.
+    // Let's use a temporary prompt to get the intended number, then show the warning modal.
+    const input = prompt(`Enter Purok Number (1-${max}):`, currentGlobalPurok);
+    
+    if(input && parseInt(input) >= 1 && parseInt(input) <= max && input !== currentGlobalPurok) {
+        document.getElementById('tempPurokTarget').value = input;
+        document.getElementById('warn-curr').innerText = currentGlobalPurok;
+        document.getElementById('warn-new').innerText = input;
+        document.getElementById('purok-warning-modal').style.display = 'flex';
     }
 }
 
-function saveSettings() {
-    localStorage.setItem('rbi_settings', JSON.stringify(settings));
+function confirmPurokChange() {
+    currentGlobalPurok = document.getElementById('tempPurokTarget').value;
+    updateGlobalPurokUI();
+    document.getElementById('purok-warning-modal').style.display = 'none';
 }
 
-// --- CONFIGURATION LOGIC ---
+function cancelPurokChange() {
+    document.getElementById('purok-warning-modal').style.display = 'none';
+}
+
+// --- CONFIG TAB ---
 function loadConfigUI() {
-    // 1. Populate Purok Dropdown
-    const pSelect = document.getElementById('addressPurok');
     const pMax = settings.purok_max || 10;
     document.getElementById('lbl-max-purok').innerText = pMax;
     document.getElementById('confPurok').value = pMax;
-    
-    pSelect.innerHTML = "";
-    for(let i=1; i<=pMax; i++){
-        let opt = document.createElement('option');
-        opt.value = i;
-        opt.innerText = i;
-        pSelect.appendChild(opt);
-    }
-
-    // 2. Populate Sitios
-    populateSelect('addressSitio', settings.sitios, "Select Sitio...");
-
-    // 3. Populate Streets
-    populateSelect('addressStreet', settings.streets, "Select Street (Optional)...");
 }
 
-function populateSelect(id, array, placeholder) {
-    const sel = document.getElementById(id);
-    sel.innerHTML = `<option value="">${placeholder}</option>`;
-    if(array && array.length > 0){
-        array.forEach(item => {
-            let opt = document.createElement('option');
-            opt.value = item;
-            opt.innerText = item;
-            sel.appendChild(opt);
-        });
-    }
-}
-
-// Config Tab Functions
 function savePurokConf() {
     const val = parseInt(document.getElementById('confPurok').value);
     if(val > 0) {
@@ -516,96 +493,39 @@ function savePurokConf() {
     }
 }
 
-function addItem(key, inputId) {
-    const input = document.getElementById(inputId);
-    const val = input.value.trim().toUpperCase();
-    if(val) {
-        if(!settings[key]) settings[key] = [];
-        settings[key].push(val);
-        saveSettings();
-        input.value = "";
-        renderConfigLists();
-        loadConfigUI(); // Refresh main form dropdowns
-    }
-}
-
-function removeItem(key, index) {
-    if(confirm("Remove this item?")) {
-        settings[key].splice(index, 1);
-        saveSettings();
-        renderConfigLists();
-        loadConfigUI();
-    }
-}
-
-function renderConfigLists() {
-    // Render Sitios
-    const sDiv = document.getElementById('listSitios');
-    sDiv.innerHTML = '';
-    (settings.sitios || []).forEach((s, i) => {
-        sDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('sitios', ${i})"></i></div>`;
-    });
-
-    // Render Streets
-    const stDiv = document.getElementById('listStreets');
-    stDiv.innerHTML = '';
-    (settings.streets || []).forEach((s, i) => {
-        stDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('streets', ${i})"></i></div>`;
-    });
-}
-
-// --- TAB FUNCTIONALITY ---
+// --- TAB SWITCHING ---
 function switchTab(tab) {
-    const regTab = document.getElementById('tab-registration');
-    const recTab = document.getElementById('tab-records');
-    const confTab = document.getElementById('tab-config');
-    
-    // Reset buttons
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-    // Hide all
-    regTab.style.display = 'none';
-    recTab.style.display = 'none';
-    confTab.style.display = 'none';
+    document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
 
     if(tab === 'reg') {
-        regTab.style.display = 'block';
+        document.getElementById('tab-registration').classList.remove('hidden');
         document.getElementById('btn-reg').classList.add('active');
     } else if(tab === 'rec') {
-        recTab.style.display = 'block';
+        document.getElementById('tab-records').classList.remove('hidden');
         document.getElementById('btn-rec').classList.add('active');
         renderList();
     } else if (tab === 'conf') {
-        confTab.style.display = 'block';
+        document.getElementById('tab-config').classList.remove('hidden');
         document.getElementById('btn-conf').classList.add('active');
-        renderConfigLists();
     }
 }
 
-// --- RELIGION LOGIC ---
+// --- RELIGION ---
 function checkReligion() {
     const sel = document.getElementById('religionSelect');
     const otherInp = document.getElementById('religionOther');
-    if(sel.value === 'OTHERS') {
-        otherInp.style.display = 'block';
-    } else {
-        otherInp.style.display = 'none';
-    }
+    otherInp.style.display = (sel.value === 'OTHERS') ? 'block' : 'none';
 }
 
-// --- CORE FUNCTIONS ---
+// --- SAVE RECORD ---
 function saveRecord(){
-  const idsToCheck = ['lastName', 'firstName', 'middleName', 'birthPlace', 'birthDate', 'citizenship', 'mFirst', 'mMiddle', 'mLast', 'addressSitio'];
+  // Modified Validation: Removed Middle, Mother, Education
+  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship'];
   
   for(let id of idsToCheck) {
       if(!document.getElementById(id).value.trim()) {
-          let fieldName = id.replace(/([A-Z])/g, ' $1').trim();
-          if(id === 'mFirst') fieldName = "Mother's First Name";
-          if(id === 'mMiddle') fieldName = "Mother's Middle Name";
-          if(id === 'mLast') fieldName = "Mother's Last Name";
-          if(id === 'addressSitio') fieldName = "Sitio (Address)";
-          
-          alert("Field Required: " + fieldName);
+          alert("FIELD REQUIRED: " + id.replace(/([A-Z])/g, ' $1').toUpperCase());
           return;
       }
   }
@@ -614,7 +534,17 @@ function saveRecord(){
   let finalReligion = document.getElementById('religionSelect').value;
   if(finalReligion === 'OTHERS') {
       finalReligion = document.getElementById('religionOther').value.toUpperCase();
-      if(!finalReligion) { alert("Please specify the religion."); return; }
+      if(!finalReligion) { alert("PLEASE SPECIFY RELIGION"); return; }
+  }
+
+  // Determine Purok: If Editing, keep original. If New, use Global.
+  let purokToSave = currentGlobalPurok;
+  if(editingIndex > -1) {
+      // If editing, we preserve the one loaded into memory/UI indicator? 
+      // Actually, let's keep the one currently in the record unless we want to allow moving.
+      // For simplicity in this logic, we keep the original record's Purok (displayed in banner)
+      // We read from the temporary banner or just the original record array.
+      purokToSave = records[editingIndex][17]; 
   }
 
   const newRow = [
@@ -630,16 +560,16 @@ function saveRecord(){
     document.getElementById('citizenship').value.toUpperCase(),
     document.getElementById('profession').value.toUpperCase(), 
     document.getElementById('contact').value, 
-    document.getElementById('email').value,   
+    "", // Email removed from UI to clean up, placeholder kept in array structure if needed
     document.getElementById('education').value,
     document.getElementById('mFirst').value.toUpperCase(),
     document.getElementById('mMiddle').value.toUpperCase(),
     document.getElementById('mLast').value.toUpperCase(),
-    // NEW FIELDS
-    document.getElementById('addressPurok').value,
-    document.getElementById('addressSitio').value,
-    document.getElementById('addressStreet').value,
-    finalReligion,
+    // ADDRESS
+    purokToSave, // Index 17
+    document.getElementById('addressDetails').value.toUpperCase(), // Index 18 (Was Sitio)
+    finalReligion, // Index 19 (Was Street)
+    // SECTORS
     document.getElementById('isOSY').checked ? "YES" : "NO",
     document.getElementById('isPWD').checked ? "YES" : "NO",
     document.getElementById('is4Ps').checked ? "YES" : "NO",
@@ -649,45 +579,38 @@ function saveRecord(){
 
   if (editingIndex > -1) {
       records[editingIndex] = newRow;
-      alert('Record Updated Successfully!');
+      alert('RECORD UPDATED!');
       cancelEdit(); 
   } else {
       records.push(newRow);
-      alert('Record Saved!');
+      alert('RECORD SAVED TO PUROK ' + purokToSave);
   }
 
   localStorage.setItem('rbiRecords', JSON.stringify(records));
   updateMotherDatalist();
 
-  // Clear fields logic
   if(editingIndex === -1) {
-      const currentType = document.getElementById('inhabitantType').value;
+      // Reset Form for new entry
+      const currType = document.getElementById('inhabitantType').value;
+      const currRel = "ROMAN CATHOLIC"; // Default
       
-      // Reset Inputs
-      document.querySelectorAll('input').forEach(input => {
-          if(input.type === 'checkbox') input.checked = false;
-          else input.value = '';
+      document.querySelectorAll('input').forEach(i => {
+          if(i.type === 'checkbox') i.checked = false;
+          else i.value = '';
       });
-      document.getElementById('citizenship').value = "FILIPINO"; 
-      document.getElementById('inhabitantType').value = currentType;
       
-      // Reset Selects to default
-      document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
-      checkReligion(); // Hide other input
-      document.getElementById('addressSitio').value = "";
-      document.getElementById('addressStreet').value = "";
-      
-      document.getElementById('inhabitantType').focus();
+      document.getElementById('inhabitantType').value = currType;
+      document.getElementById('citizenship').value = "FILIPINO";
+      document.getElementById('religionSelect').value = currRel;
+      checkReligion();
+      document.getElementById('lastName').focus();
   }
-  
-  renderList();
 }
 
-// --- EDITING LOGIC ---
+// --- EDITING ---
 function startEdit(index) {
     const r = records[index];
     
-    // 1. Basic Fields
     document.getElementById('inhabitantType').value = r[0];
     document.getElementById('lastName').value = r[1];
     document.getElementById('firstName').value = r[2];
@@ -700,26 +623,22 @@ function startEdit(index) {
     document.getElementById('citizenship').value = r[9];
     document.getElementById('profession').value = r[10];
     document.getElementById('contact').value = r[11];
-    document.getElementById('email').value = r[12];
+    // Skip Email [12]
     document.getElementById('education').value = r[13];
     document.getElementById('mFirst').value = r[14];
     document.getElementById('mMiddle').value = r[15];
     document.getElementById('mLast').value = r[16];
+    
+    // Address
+    document.getElementById('addressDetails').value = r[18];
 
-    // 2. Address Fields
-    document.getElementById('addressPurok').value = r[17] || 1;
-    document.getElementById('addressSitio').value = r[18] || "";
-    document.getElementById('addressStreet').value = r[19] || "";
-
-    // 3. Religion Field
-    const relVal = r[20] || "ROMAN CATHOLIC";
+    // Religion [19] - Was mapped to Street index in previous logic, now Religion
+    const relVal = r[19] || "ROMAN CATHOLIC";
     const relSelect = document.getElementById('religionSelect');
-    // Check if value exists in standard options
     let exists = false;
     for(let i=0; i<relSelect.options.length; i++){
         if(relSelect.options[i].value === relVal) exists = true;
     }
-    
     if(exists) {
         relSelect.value = relVal;
         document.getElementById('religionOther').style.display = 'none';
@@ -729,78 +648,97 @@ function startEdit(index) {
         document.getElementById('religionOther').value = relVal;
     }
 
-    // 4. Toggles
-    document.getElementById('isOSY').checked = (r[21] === "YES");
-    document.getElementById('isPWD').checked = (r[22] === "YES");
-    document.getElementById('is4Ps').checked = (r[23] === "YES");
-    document.getElementById('isIPS').checked = (r[24] === "YES");
-    document.getElementById('isSolo').checked = (r[25] === "YES");
+    // Toggles
+    document.getElementById('isOSY').checked = (r[20] === "YES");
+    document.getElementById('isPWD').checked = (r[21] === "YES");
+    document.getElementById('is4Ps').checked = (r[22] === "YES");
+    document.getElementById('isIPS').checked = (r[23] === "YES");
+    document.getElementById('isSolo').checked = (r[24] === "YES");
 
     editingIndex = index;
     
-    document.getElementById('btn-save').innerText = "UPDATE RECORD";
-    document.getElementById('btn-cancel').style.display = "block";
+    // UI State
+    document.getElementById('btn-save').innerHTML = '<i class="fas fa-check"></i> UPDATE RECORD';
+    document.getElementById('btn-cancel').style.display = "flex";
+    document.getElementById('edit-banner').style.display = "block";
+    document.getElementById('edit-purok-indicator').innerText = r[17]; // Show record's Purok
     
     closeViewer();
     switchTab('reg');
-    window.scrollTo(0,0);
 }
 
 function cancelEdit() {
     editingIndex = -1;
-    document.getElementById('btn-save').innerText = "SAVE RECORD";
+    document.getElementById('btn-save').innerHTML = '<i class="fas fa-save"></i> SAVE RECORD';
     document.getElementById('btn-cancel').style.display = "none";
+    document.getElementById('edit-banner').style.display = "none";
     
-    // Clear inputs
-    const inputs = document.querySelectorAll('input');
-    inputs.forEach(input => {
-        if(input.type === 'checkbox') input.checked = false;
-        else input.value = '';
+    document.querySelectorAll('input').forEach(i => {
+        if(i.type === 'checkbox') i.checked = false;
+        else i.value = '';
     });
     
     document.getElementById('citizenship').value = "FILIPINO";
     document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
     checkReligion();
-    document.getElementById('addressSitio').value = "";
-    document.getElementById('addressStreet').value = "";
 }
 
+// --- SEARCH & VIEW ---
 function renderList(){
-  const q = searchBox.value.toLowerCase();
-  resultList.innerHTML = '';
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const list = document.getElementById('resultList');
+  list.innerHTML = '';
   
   const filtered = records.map((r, i) => ({data: r, index: i}))
-                          .filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
+    .filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
   
-  if(filtered.length === 0 && q.length > 0) {
-      resultList.innerHTML = '<div style="text-align:center; padding:10px; color:#999;">No records found</div>';
+  if(filtered.length === 0) {
+      list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">NO RECORDS FOUND</div>';
       return;
   }
 
   filtered.forEach((item) => {
     const r = item.data;
     const div = document.createElement('div');
-    div.className = 'card';
+    div.className = 'record-card';
     div.onclick = () => viewRecord(item.index); 
     div.innerHTML = `
-        <span>${r[1]}, ${r[2]} <small>(Purok ${r[17] || '?'})</small></span>
-        <small style="color:#0a3d62">View <i class="fas fa-chevron-right"></i></small>
+        <div>
+            <h5>${r[1]}, ${r[2]} ${r[4]}</h5>
+            <p>PUROK ${r[17]} | ${r[7]}</p>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--accent);"></i>
     `;
-    resultList.appendChild(div);
+    list.appendChild(div);
   });
 }
 
-// --- NEW FEATURE: AUTO FILL FROM RECORDED MOTHERS ---
+function viewRecord(index) {
+    const r = records[index];
+    const html = HEADERS.map((h, i) => `
+        <div style="border-bottom:1px solid #eee; padding:8px 0;">
+            <span style="font-size:10px; color:#94a3b8; display:block;">${h}</span>
+            <span style="font-size:14px; font-weight:600; color:#334155;">${r[i] || '-'}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('viewer-content').innerHTML = html;
+    document.getElementById('viewer-actions').innerHTML = `
+        <button class="btn btn-warning" onclick="startEdit(${index})" style="background:#f59e0b; color:white;">EDIT RECORD</button>
+        <button class="btn btn-ghost" onclick="closeViewer()">CLOSE</button>
+    `;
+    document.getElementById('viewer-overlay').style.display = 'flex';
+}
+
+function closeViewer() { document.getElementById('viewer-overlay').style.display = 'none'; }
+
 function updateMotherDatalist() {
     const dl = document.getElementById('motherList');
     dl.innerHTML = '';
-    
     const uniqueMothers = new Set();
-    
     records.forEach(r => {
         if(r[16] && r[14]) {
             const motherKey = `${r[16]}, ${r[14]}`;
-            
             if(!uniqueMothers.has(motherKey)){
                 uniqueMothers.add(motherKey);
                 const option = document.createElement('option');
@@ -810,77 +748,25 @@ function updateMotherDatalist() {
         }
     });
 }
-
 function autoFillMother(inputObj) {
     const val = inputObj.value;
-    if(!val) return;
-
-    const found = records.find(r => {
-        const mStr = `${r[16]}, ${r[14]} ${r[15] || ''}`.trim();
-        return mStr === val;
-    });
-    
+    const found = records.find(r => `${r[16]}, ${r[14]} ${r[15] || ''}`.trim() === val);
     if(found) {
-        document.getElementById('mLast').value = found[16];   // Mother's Last
-        document.getElementById('mFirst').value = found[14];  // Mother's First
-        document.getElementById('mMiddle').value = found[15]; // Mother's Middle
+        document.getElementById('mLast').value = found[16];
+        document.getElementById('mFirst').value = found[14];
+        document.getElementById('mMiddle').value = found[15];
     }
-}
-
-// --- VIEWER FUNCTIONALITY ---
-function viewRecord(index) {
-    const r = records[index];
-    const html = HEADERS.map((h, i) => `
-        <div class="detail-row">
-            <span class="detail-label">${h}</span>
-            <span class="detail-val">${r[i] || '-'}</span>
-        </div>
-    `).join('');
-    
-    document.getElementById('viewer-content').innerHTML = html;
-    
-    // Inject Buttons (Edit & Close)
-    document.getElementById('viewer-actions').innerHTML = `
-        <button class="edit-btn" onclick="startEdit(${index})">EDIT RECORD</button>
-        <button class="close-btn" onclick="closeViewer()">Close Viewer</button>
-    `;
-    
-    document.getElementById('viewer-overlay').style.display = 'flex';
-}
-
-function closeViewer() {
-    document.getElementById('viewer-overlay').style.display = 'none';
 }
 
 function exportExcel(){
   if(records.length === 0){ alert("No records to export."); return; }
-
   const wb = XLSX.utils.book_new();
-
-  // SHEET 1: INSTRUCTIONS
-  const instructionData = [
-      ["INSTRUCTIONS"],
-      ["This file was generated by SEC JERICK RBI System."],
-      ["Please go to the 'DATA' sheet (Sheet 2) to view the records."],
-      ["Columns P onwards contain Sectoral and Address data."]
-  ];
-  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionData);
-  XLSX.utils.book_append_sheet(wb, wsInstructions, "INSTRUCTIONS");
-
-  // SHEET 2: DATA
+  const instructionData = [["INSTRUCTIONS"], ["Generated by SEC JERICK RBI System"], ["See 'DATA' sheet."]];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
   const allData = [HEADERS, ...records];
-  const wsData = XLSX.utils.aoa_to_sheet(allData);
-  
-  const wscols = HEADERS.map(h => ({wch: h.length + 5}));
-  wsData['!cols'] = wscols;
-
-  XLSX.utils.book_append_sheet(wb, wsData, "DATA");
-
-  const dateStr = new Date().toISOString().slice(0,10);
-  XLSX.writeFile(wb, `RBI_Export_${dateStr}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+  XLSX.writeFile(wb, `RBI_Export_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
-
-renderList();
 </script>
 </body>
 </html>
