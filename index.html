@@ -129,8 +129,10 @@
 
         /* Button Colors */
         button.secondary { background: #27ae60; } /* Excel Green */
+        button.danger { background: #e74c3c; } 
         button.close-btn { background: #e74c3c; margin-bottom: 20px; } 
         button.edit-btn { background: #f39c12; margin-bottom: 10px; color: white; } 
+        button.add-small { width: auto; padding: 8px 15px; font-size: 12px; margin-top: 0; }
 
         /* SCROLLABLE LIST - Showing approx 4 records */
         .list { margin-top: 10px; max-height: 280px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 8px; }
@@ -151,6 +153,30 @@
         .detail-row { border-bottom: 1px solid #eee; padding: 10px 0; }
         .detail-label { font-size: 11px; color: #888; text-transform: uppercase; display: block; }
         .detail-val { font-size: 14px; font-weight: 600; color: #333; }
+
+        /* SECTORAL TOGGLES GRID */
+        .sector-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .toggle-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toggle-item label { margin: 0; font-size: 12px; cursor: pointer; }
+        .toggle-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #0a3d62; }
+
+        /* CONFIG LIST ITEMS */
+        .config-item {
+            display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;
+        }
 
         footer {
             text-align: center;
@@ -189,12 +215,15 @@
 </header>
 
 <div class="tab-container">
-    <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg">REGISTRATION</button>
-    <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec">RECORDS LIST</button>
+    <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg">FORM</button>
+    <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec">RECORDS</button>
+    <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf">CONFIG</button>
 </div>
 
 <div id="tab-registration">
     <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">I. Personal Information</h4>
+        
         <div class="form-group"><label>Inhabitant Type<span class="req">*</span></label><select id="inhabitantType"><option>NON-MIGRANT</option><option>MIGRANT</option><option>TRANSIENT</option></select></div>
         
         <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="e.g. Dela Cruz"></div>
@@ -204,10 +233,57 @@
         <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
         <div class="form-group"><label>Birthday<span class="req">*</span></label><input type="date" id="birthDate"></div>
         <div class="form-group"><label>Sex<span class="req">*</span></label><select id="sex"><option>MALE</option><option>FEMALE</option></select></div>
+        
         <div class="form-group"><label>Civil Status<span class="req">*</span></label><select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select></div>
         <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
+
+        <div class="form-group">
+            <label>Religion<span class="req">*</span></label>
+            <select id="religionSelect" onchange="checkReligion()">
+                <option value="ROMAN CATHOLIC">ROMAN CATHOLIC</option>
+                <option value="IGLESIA NI CRISTO">IGLESIA NI CRISTO</option>
+                <option value="ISLAM">ISLAM</option>
+                <option value="EVANGELICALS">EVANGELICALS</option>
+                <option value="BAPTIST">BAPTIST</option>
+                <option value="SEVENTH DAY ADVENTIST">SEVENTH DAY ADVENTIST</option>
+                <option value="AGLIPAYAN">AGLIPAYAN</option>
+                <option value="JEHOVAH'S WITNESS">JEHOVAH'S WITNESS</option>
+                <option value="OTHERS">OTHERS (PLEASE SPECIFY)</option>
+            </select>
+            <input id="religionOther" placeholder="Type Religion Here..." style="display:none; margin-top:5px; border-color:#1e90ff;">
+        </div>
+
         <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
+    </div>
+
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">II. Address Details</h4>
+        <div class="form-group">
+            <label>Purok / Zone (1-<span id="lbl-max-purok"></span>)<span class="req">*</span></label>
+            <select id="addressPurok"></select>
+        </div>
+        <div class="form-group">
+            <label>Sitio<span class="req">*</span></label>
+            <select id="addressSitio"><option value="">Select Sitio...</option></select>
+        </div>
+        <div class="form-group">
+            <label>Street Name</label>
+            <select id="addressStreet"><option value="">Select Street (Optional)...</option></select>
+        </div>
+    </div>
+
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">III. Sectoral & Contact</h4>
         
+        <label style="margin-bottom:10px;">Sectoral Group Membership:</label>
+        <div class="sector-grid">
+            <div class="toggle-item"><label for="isOSY">OSY</label><input type="checkbox" id="isOSY"></div>
+            <div class="toggle-item"><label for="isPWD">PWD</label><input type="checkbox" id="isPWD"></div>
+            <div class="toggle-item"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
+            <div class="toggle-item"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
+            <div class="toggle-item"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
+        </div>
+
         <div class="form-group"><label>Contact Number (Optional)</label><input id="contact" type="tel"></div>
         <div class="form-group"><label>Email Address (Optional)</label><input id="email" type="email"></div>
         
@@ -266,6 +342,37 @@
     </div>
 </div>
 
+<div id="tab-config" class="hidden-tab">
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0;">System Configuration</h4>
+        <p style="font-size:12px; color:#666;">Set up your Barangay's geography data here.</p>
+        
+        <div class="form-group">
+            <label>Max Purok Number (1-N)</label>
+            <input type="number" id="confPurok" placeholder="Default: 10">
+            <button class="add-small" onclick="savePurokConf()">Set Purok Max</button>
+        </div>
+
+        <div class="form-group" style="margin-top:20px;">
+            <label>Manage Sitios</label>
+            <div style="display:flex; gap:5px;">
+                <input id="newSitio" placeholder="Enter Sitio Name">
+                <button class="add-small" onclick="addItem('sitios', 'newSitio')">Add</button>
+            </div>
+            <div class="list" id="listSitios" style="max-height:150px;"></div>
+        </div>
+
+        <div class="form-group" style="margin-top:20px;">
+            <label>Manage Streets</label>
+            <div style="display:flex; gap:5px;">
+                <input id="newStreet" placeholder="Enter Street Name">
+                <button class="add-small" onclick="addItem('streets', 'newStreet')">Add</button>
+            </div>
+            <div class="list" id="listStreets" style="max-height:150px;"></div>
+        </div>
+    </div>
+</div>
+
 <footer>© SEC JERICK™ | Modern RBI System (For Field Use)</footer>
 </div>
 
@@ -279,17 +386,26 @@
 
 <script>
 // --- CONFIGURATION ---
+// Extended Headers to include new fields
 const HEADERS = [
     "INHABITANT TYPE", "LAST NAME", "FIRST NAME", "MIDDLE NAME", "SUFFIX", 
     "BIRTH PLACE", "BIRTHDATE (YYYY-MM-DD)", "SEX", "CIVIL STATUS", "CITIZENSHIP", 
     "PROFESSION/ OCCUPATION", "CONTACT NUMBER", "EMAIL ADDRESS", 
     "HIGHEST EDUCATIONAL ATTAINMENT", "MOTHER'S FIRST NAME", 
-    "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME"
+    "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME",
+    "PUROK", "SITIO", "STREET", "RELIGION",
+    "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
 ];
 
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
-let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { custom_password: '' };
-let editingIndex = -1; // -1 means adding new, otherwise index of record being edited
+// Extended settings object default
+let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
+    custom_password: '', 
+    purok_max: 10,
+    sitios: [],
+    streets: [] 
+};
+let editingIndex = -1; 
 
 // --- SECURITY LOGIC ---
 function getDynamicPassword() {
@@ -297,7 +413,6 @@ function getDynamicPassword() {
     const m = now.getMonth();
     const d = now.getDate();
     const y = now.getFullYear();
-    // Week calc:
     const onejan = new Date(y, 0, 1);
     const w = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
     return `RBI-${m}${d}${y}${w*2}`;
@@ -307,17 +422,18 @@ window.onload = function() {
     if(!settings.custom_password) {
         document.getElementById('login-msg').innerText = "Create Your Password to Start";
     }
-    updateMotherDatalist(); // Init Auto-fill list for MOTHERS
+    updateMotherDatalist(); 
+    loadConfigUI(); // Load Dropdowns
+    renderConfigLists(); // Load Config Tab Lists
 }
 
 function attemptLogin() {
     const input = document.getElementById('login-pass').value;
     
-    // 1. Initial Setup Flow
     if (!settings.custom_password) {
         if(input.trim().length > 0) {
             settings.custom_password = input.trim();
-            localStorage.setItem('rbi_settings', JSON.stringify(settings));
+            saveSettings();
             alert("Password Set! You are now logged in.");
             document.getElementById('login-overlay').style.display = 'none';
         } else {
@@ -326,7 +442,6 @@ function attemptLogin() {
         return;
     }
 
-    // 2. Normal Login Flow (Only accepts custom password)
     if (input === settings.custom_password) {
         document.getElementById('login-overlay').style.display = 'none';
     } else {
@@ -342,7 +457,7 @@ function forgotPassword() {
         const newPass = prompt("Admin Code Correct. Enter your NEW Password:");
         if(newPass && newPass.trim().length > 0) { 
             settings.custom_password = newPass.trim(); 
-            localStorage.setItem('rbi_settings', JSON.stringify(settings)); 
+            saveSettings(); 
             alert("Password Reset Successfully."); 
         }
     } else {
@@ -350,72 +465,193 @@ function forgotPassword() {
     }
 }
 
+function saveSettings() {
+    localStorage.setItem('rbi_settings', JSON.stringify(settings));
+}
+
+// --- CONFIGURATION LOGIC ---
+function loadConfigUI() {
+    // 1. Populate Purok Dropdown
+    const pSelect = document.getElementById('addressPurok');
+    const pMax = settings.purok_max || 10;
+    document.getElementById('lbl-max-purok').innerText = pMax;
+    document.getElementById('confPurok').value = pMax;
+    
+    pSelect.innerHTML = "";
+    for(let i=1; i<=pMax; i++){
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = i;
+        pSelect.appendChild(opt);
+    }
+
+    // 2. Populate Sitios
+    populateSelect('addressSitio', settings.sitios, "Select Sitio...");
+
+    // 3. Populate Streets
+    populateSelect('addressStreet', settings.streets, "Select Street (Optional)...");
+}
+
+function populateSelect(id, array, placeholder) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    if(array && array.length > 0){
+        array.forEach(item => {
+            let opt = document.createElement('option');
+            opt.value = item;
+            opt.innerText = item;
+            sel.appendChild(opt);
+        });
+    }
+}
+
+// Config Tab Functions
+function savePurokConf() {
+    const val = parseInt(document.getElementById('confPurok').value);
+    if(val > 0) {
+        settings.purok_max = val;
+        saveSettings();
+        loadConfigUI();
+        alert("Purok Limit Updated");
+    }
+}
+
+function addItem(key, inputId) {
+    const input = document.getElementById(inputId);
+    const val = input.value.trim().toUpperCase();
+    if(val) {
+        if(!settings[key]) settings[key] = [];
+        settings[key].push(val);
+        saveSettings();
+        input.value = "";
+        renderConfigLists();
+        loadConfigUI(); // Refresh main form dropdowns
+    }
+}
+
+function removeItem(key, index) {
+    if(confirm("Remove this item?")) {
+        settings[key].splice(index, 1);
+        saveSettings();
+        renderConfigLists();
+        loadConfigUI();
+    }
+}
+
+function renderConfigLists() {
+    // Render Sitios
+    const sDiv = document.getElementById('listSitios');
+    sDiv.innerHTML = '';
+    (settings.sitios || []).forEach((s, i) => {
+        sDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('sitios', ${i})"></i></div>`;
+    });
+
+    // Render Streets
+    const stDiv = document.getElementById('listStreets');
+    stDiv.innerHTML = '';
+    (settings.streets || []).forEach((s, i) => {
+        stDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('streets', ${i})"></i></div>`;
+    });
+}
+
 // --- TAB FUNCTIONALITY ---
 function switchTab(tab) {
     const regTab = document.getElementById('tab-registration');
     const recTab = document.getElementById('tab-records');
-    const btnReg = document.getElementById('btn-reg');
-    const btnRec = document.getElementById('btn-rec');
+    const confTab = document.getElementById('tab-config');
+    
+    // Reset buttons
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+    // Hide all
+    regTab.style.display = 'none';
+    recTab.style.display = 'none';
+    confTab.style.display = 'none';
 
     if(tab === 'reg') {
         regTab.style.display = 'block';
-        recTab.style.display = 'none';
-        btnReg.classList.add('active');
-        btnRec.classList.remove('active');
-    } else {
-        regTab.style.display = 'none';
+        document.getElementById('btn-reg').classList.add('active');
+    } else if(tab === 'rec') {
         recTab.style.display = 'block';
-        btnReg.classList.remove('active');
-        btnRec.classList.add('active');
-        renderList(); // Refresh list when tab opens
+        document.getElementById('btn-rec').classList.add('active');
+        renderList();
+    } else if (tab === 'conf') {
+        confTab.style.display = 'block';
+        document.getElementById('btn-conf').classList.add('active');
+        renderConfigLists();
+    }
+}
+
+// --- RELIGION LOGIC ---
+function checkReligion() {
+    const sel = document.getElementById('religionSelect');
+    const otherInp = document.getElementById('religionOther');
+    if(sel.value === 'OTHERS') {
+        otherInp.style.display = 'block';
+    } else {
+        otherInp.style.display = 'none';
     }
 }
 
 // --- CORE FUNCTIONS ---
 function saveRecord(){
-  // 1. Strict Validation
-  const idsToCheck = ['lastName', 'firstName', 'middleName', 'birthPlace', 'birthDate', 'citizenship', 'mFirst', 'mMiddle', 'mLast'];
+  const idsToCheck = ['lastName', 'firstName', 'middleName', 'birthPlace', 'birthDate', 'citizenship', 'mFirst', 'mMiddle', 'mLast', 'addressSitio'];
   
   for(let id of idsToCheck) {
       if(!document.getElementById(id).value.trim()) {
-          // Format ID for alert display
           let fieldName = id.replace(/([A-Z])/g, ' $1').trim();
           if(id === 'mFirst') fieldName = "Mother's First Name";
           if(id === 'mMiddle') fieldName = "Mother's Middle Name";
           if(id === 'mLast') fieldName = "Mother's Last Name";
+          if(id === 'addressSitio') fieldName = "Sitio (Address)";
           
           alert("Field Required: " + fieldName);
           return;
       }
   }
   
+  // Handle Religion
+  let finalReligion = document.getElementById('religionSelect').value;
+  if(finalReligion === 'OTHERS') {
+      finalReligion = document.getElementById('religionOther').value.toUpperCase();
+      if(!finalReligion) { alert("Please specify the religion."); return; }
+  }
+
   const newRow = [
-    inhabitantType.value,
-    lastName.value.toUpperCase(),
-    firstName.value.toUpperCase(),
-    middleName.value.toUpperCase(),
-    suffix.value.toUpperCase(), 
-    birthPlace.value.toUpperCase(),
-    birthDate.value,
-    sex.value,
-    civilStatus.value,
-    citizenship.value.toUpperCase(),
-    profession.value.toUpperCase(), 
-    contact.value, // Optional
-    email.value,   // Optional
-    education.value,
-    mFirst.value.toUpperCase(),
-    mMiddle.value.toUpperCase(),
-    mLast.value.toUpperCase()
+    document.getElementById('inhabitantType').value,
+    document.getElementById('lastName').value.toUpperCase(),
+    document.getElementById('firstName').value.toUpperCase(),
+    document.getElementById('middleName').value.toUpperCase(),
+    document.getElementById('suffix').value.toUpperCase(), 
+    document.getElementById('birthPlace').value.toUpperCase(),
+    document.getElementById('birthDate').value,
+    document.getElementById('sex').value,
+    document.getElementById('civilStatus').value,
+    document.getElementById('citizenship').value.toUpperCase(),
+    document.getElementById('profession').value.toUpperCase(), 
+    document.getElementById('contact').value, 
+    document.getElementById('email').value,   
+    document.getElementById('education').value,
+    document.getElementById('mFirst').value.toUpperCase(),
+    document.getElementById('mMiddle').value.toUpperCase(),
+    document.getElementById('mLast').value.toUpperCase(),
+    // NEW FIELDS
+    document.getElementById('addressPurok').value,
+    document.getElementById('addressSitio').value,
+    document.getElementById('addressStreet').value,
+    finalReligion,
+    document.getElementById('isOSY').checked ? "YES" : "NO",
+    document.getElementById('isPWD').checked ? "YES" : "NO",
+    document.getElementById('is4Ps').checked ? "YES" : "NO",
+    document.getElementById('isIPS').checked ? "YES" : "NO",
+    document.getElementById('isSolo').checked ? "YES" : "NO"
   ];
 
   if (editingIndex > -1) {
-      // UPDATE EXISTING
       records[editingIndex] = newRow;
       alert('Record Updated Successfully!');
-      cancelEdit(); // Reset form UI
+      cancelEdit(); 
   } else {
-      // SAVE NEW
       records.push(newRow);
       alert('Record Saved!');
   }
@@ -425,14 +661,23 @@ function saveRecord(){
 
   // Clear fields logic
   if(editingIndex === -1) {
-      // Only clear input fields completely if we just saved a NEW record
-      // If we finished editing, cancelEdit() handles the clearing/resetting
-      const currentType = inhabitantType.value;
-      const inputs = document.querySelectorAll('input');
-      inputs.forEach(input => input.value = '');
-      inhabitantType.value = currentType;
-      citizenship.value = "FILIPINO"; 
-      inhabitantType.focus();
+      const currentType = document.getElementById('inhabitantType').value;
+      
+      // Reset Inputs
+      document.querySelectorAll('input').forEach(input => {
+          if(input.type === 'checkbox') input.checked = false;
+          else input.value = '';
+      });
+      document.getElementById('citizenship').value = "FILIPINO"; 
+      document.getElementById('inhabitantType').value = currentType;
+      
+      // Reset Selects to default
+      document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
+      checkReligion(); // Hide other input
+      document.getElementById('addressSitio').value = "";
+      document.getElementById('addressStreet').value = "";
+      
+      document.getElementById('inhabitantType').focus();
   }
   
   renderList();
@@ -442,7 +687,7 @@ function saveRecord(){
 function startEdit(index) {
     const r = records[index];
     
-    // Map array data to Inputs
+    // 1. Basic Fields
     document.getElementById('inhabitantType').value = r[0];
     document.getElementById('lastName').value = r[1];
     document.getElementById('firstName').value = r[2];
@@ -461,10 +706,38 @@ function startEdit(index) {
     document.getElementById('mMiddle').value = r[15];
     document.getElementById('mLast').value = r[16];
 
-    // Set State
+    // 2. Address Fields
+    document.getElementById('addressPurok').value = r[17] || 1;
+    document.getElementById('addressSitio').value = r[18] || "";
+    document.getElementById('addressStreet').value = r[19] || "";
+
+    // 3. Religion Field
+    const relVal = r[20] || "ROMAN CATHOLIC";
+    const relSelect = document.getElementById('religionSelect');
+    // Check if value exists in standard options
+    let exists = false;
+    for(let i=0; i<relSelect.options.length; i++){
+        if(relSelect.options[i].value === relVal) exists = true;
+    }
+    
+    if(exists) {
+        relSelect.value = relVal;
+        document.getElementById('religionOther').style.display = 'none';
+    } else {
+        relSelect.value = 'OTHERS';
+        document.getElementById('religionOther').style.display = 'block';
+        document.getElementById('religionOther').value = relVal;
+    }
+
+    // 4. Toggles
+    document.getElementById('isOSY').checked = (r[21] === "YES");
+    document.getElementById('isPWD').checked = (r[22] === "YES");
+    document.getElementById('is4Ps').checked = (r[23] === "YES");
+    document.getElementById('isIPS').checked = (r[24] === "YES");
+    document.getElementById('isSolo').checked = (r[25] === "YES");
+
     editingIndex = index;
     
-    // UI Changes
     document.getElementById('btn-save').innerText = "UPDATE RECORD";
     document.getElementById('btn-cancel').style.display = "block";
     
@@ -480,8 +753,16 @@ function cancelEdit() {
     
     // Clear inputs
     const inputs = document.querySelectorAll('input');
-    inputs.forEach(input => input.value = '');
+    inputs.forEach(input => {
+        if(input.type === 'checkbox') input.checked = false;
+        else input.value = '';
+    });
+    
     document.getElementById('citizenship').value = "FILIPINO";
+    document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
+    checkReligion();
+    document.getElementById('addressSitio').value = "";
+    document.getElementById('addressStreet').value = "";
 }
 
 function renderList(){
@@ -502,7 +783,7 @@ function renderList(){
     div.className = 'card';
     div.onclick = () => viewRecord(item.index); 
     div.innerHTML = `
-        <span>${r[1]}, ${r[2]} <small>(${r[6]})</small></span>
+        <span>${r[1]}, ${r[2]} <small>(Purok ${r[17] || '?'})</small></span>
         <small style="color:#0a3d62">View <i class="fas fa-chevron-right"></i></small>
     `;
     resultList.appendChild(div);
@@ -580,7 +861,8 @@ function exportExcel(){
   const instructionData = [
       ["INSTRUCTIONS"],
       ["This file was generated by SEC JERICK RBI System."],
-      ["Please go to the 'DATA' sheet (Sheet 2) to view the records."]
+      ["Please go to the 'DATA' sheet (Sheet 2) to view the records."],
+      ["Columns P onwards contain Sectoral and Address data."]
   ];
   const wsInstructions = XLSX.utils.aoa_to_sheet(instructionData);
   XLSX.utils.book_append_sheet(wb, wsInstructions, "INSTRUCTIONS");
