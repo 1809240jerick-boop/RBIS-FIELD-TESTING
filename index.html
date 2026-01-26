@@ -76,7 +76,7 @@
             background: white; 
             border-bottom: 1px solid #e2e8f0; 
             position: sticky; 
-            top: 55px; /* Adjust based on context-bar height */
+            top: 55px; 
             z-index: 800; 
             overflow-x: auto; 
             white-space: nowrap;
@@ -158,7 +158,7 @@
         /* TOASTS */
         #toast-container {
             position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            z-index: 100000; /* Max Z-Index */
+            z-index: 100000; 
             display: flex; flex-direction: column; gap: 10px; align-items: center;
             width: 90%; max-width: 400px;
         }
@@ -218,7 +218,7 @@
             padding: 15px 20px;
             border-top: 1px solid #e2e8f0;
             z-index: 500;
-            margin: 0 -20px -20px -20px; /* Counteract parent padding */
+            margin: 0 -20px -20px -20px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
         }
 
@@ -259,6 +259,22 @@
             letter-spacing: 0.5px;
         }
         @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+        /* SHARE LINK STYLING */
+        .share-link {
+            color: var(--accent);
+            text-decoration: underline;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .template-btn {
+            padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px;
+            margin-bottom: 10px; cursor: pointer; text-align: left;
+            display: flex; align-items: center; gap: 10px; background: #f8fafc;
+        }
+        .template-btn:hover { border-color: var(--accent); background: white; }
     </style>
 </head>
 <body>
@@ -288,14 +304,51 @@
     </div>
 </div>
 
+<div id="export-options-modal" class="modal-overlay" style="z-index:99995;">
+    <div class="modal-box">
+        <h3 style="margin:0 0 15px 0;">CHOOSE TEMPLATE</h3>
+        <p style="font-size:12px; color:#666; margin-bottom:20px;">Select the export format:</p>
+        
+        <div class="template-btn" onclick="processExport('BIMS')">
+            <i class="fas fa-file-invoice" style="color:var(--warning);"></i>
+            <div>
+                <div style="font-weight:700; font-size:13px;">BIMS COMPATIBLE</div>
+                <div style="font-size:10px; color:#64748b;">Gov't Format (Sheet 1 Instr., Sheet 2 Data). <span style="color:var(--danger);">Note: Drops extra fields.</span></div>
+            </div>
+        </div>
+
+        <div class="template-btn" onclick="processExport('RBIS')">
+            <i class="fas fa-database" style="color:var(--accent);"></i>
+            <div>
+                <div style="font-weight:700; font-size:13px;">RBIS FULL DATA</div>
+                <div style="font-size:10px; color:#64748b;">Exports all system columns including Purok & Sectors.</div>
+            </div>
+        </div>
+
+        <div class="template-btn" onclick="processExport('BOTH')">
+            <i class="fas fa-copy" style="color:var(--success);"></i>
+            <div>
+                <div style="font-weight:700; font-size:13px;">DOWNLOAD BOTH</div>
+                <div style="font-size:10px; color:#64748b;">Get both BIMS and RBIS files.</div>
+            </div>
+        </div>
+
+        <button class="btn btn-ghost" onclick="closeExportModal()" style="margin-top:10px;">CANCEL</button>
+    </div>
+</div>
+
 <div id="share-modal" class="modal-overlay" style="z-index:99996;">
     <div class="modal-box">
-        <div style="color:var(--success); font-size:50px; margin-bottom:15px;"><i class="fas fa-file-excel"></i></div>
-        <h3 style="margin:0;">EXPORT READY</h3>
-        <p style="font-size:13px; color:#666; margin: 10px 0 25px 0;">File downloaded successfully.<br>Do you want to share it now?</p>
-        <div style="display:flex; gap:10px;">
+        <div style="color:var(--success); font-size:50px; margin-bottom:15px;"><i class="fas fa-check-circle"></i></div>
+        <h3 style="margin:0;">DOWNLOAD COMPLETE</h3>
+        <p style="font-size:13px; color:#666; margin: 10px 0 25px 0;">File has been saved to your device.</p>
+        
+        <a id="share-link-text" class="share-link" onclick="triggerShareAction()">
+            <i class="fas fa-share-alt"></i> Share File
+        </a>
+
+        <div style="display:flex; gap:10px; margin-top:25px;">
             <button class="btn btn-ghost" onclick="closeShareModal()">CLOSE</button>
-            <button class="btn btn-primary" onclick="triggerShareAction()">SHARE FILE</button>
         </div>
     </div>
 </div>
@@ -474,7 +527,7 @@
         </div>
 
         <div class="static-export-bar">
-            <button class="btn btn-success" onclick="executeDownloadOnly()"><i class="fas fa-file-excel"></i> EXPORT TO EXCEL</button>
+            <button class="btn btn-success" onclick="openExportModal()"><i class="fas fa-file-excel"></i> EXPORT TO EXCEL</button>
         </div>
     </div>
 
@@ -534,7 +587,7 @@
 <style> @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } </style>
 
 <script>
-// --- PWA INSTALLATION & SERVICE WORKER LOGIC ---
+// --- PWA INSTALLATION ---
 let deferredPrompt;
 const installBtn = document.getElementById('install-btn');
 
@@ -572,8 +625,8 @@ window.addEventListener('appinstalled', () => {
     showToast("App Installed Successfully!", "success");
 });
 
-// --- EXISTING CONFIGURATION ---
-const HEADERS = [
+// --- CONFIGURATION ---
+const HEADERS_RBIS = [
     "INHABITANT TYPE", "LAST NAME", "FIRST NAME", "MIDDLE NAME", "SUFFIX", 
     "BIRTH PLACE", "BIRTHDATE (YYYY-MM-DD)", "SEX", "CIVIL STATUS", "CITIZENSHIP", 
     "PROFESSION/ OCCUPATION", "CONTACT NUMBER", "EMAIL ADDRESS", 
@@ -583,13 +636,17 @@ const HEADERS = [
     "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
 ];
 
+// BIMS Headers (from Sheet 2 Data snippet)
+const HEADERS_BIMS = [
+    "INHABITANT TYPE","LAST NAME","FIRST NAME","MIDDLE NAME","SUFFIX","BIRTH PLACE","BIRTHDATE (YYYY-MM-DD)","SEX","CIVIL STATUS","CITIZENSHIP","PROFESSION/ OCCUPATION","CONTACT NUMBER","EMAIL ADDRESS","HIGHEST EDUCATIONAL ATTAINMENT","MOTHER'S FIRST NAME","MOTHER'S MIDDLE NAME","MOTHER'S LAST NAME"
+];
+
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
 let households = JSON.parse(localStorage.getItem('rbiHouseholds')) || [];
 let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
     custom_password: '', purok_max: 10, addresses: []
 };
 
-// Global State
 let currentGlobalPurok = localStorage.getItem('globalPurok') || "1";
 let editingIndex = -1; 
 let hhPage = 1;
@@ -598,40 +655,32 @@ let currentEditingHH = null;
 let tempHHMembers = []; 
 let promptCallback = null;
 let confirmCallback = null;
-let currentExportFile = null; // Stores file for sharing
+let currentExportFile = null;
 
 const TABS = ['reg', 'rec', 'hh', 'conf'];
 let currentTab = 'reg';
 
-// --- TOUCH GESTURE LOGIC ---
+// --- TOUCH LOGIC ---
 let touchStartX = 0;
 let touchEndX = 0;
 
-document.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-});
-
-document.addEventListener('touchend', e => {
+document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+document.addEventListener('touchend', e => { 
     touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-});
-
-function handleSwipe() {
     const threshold = 50; 
     if (touchEndX < touchStartX - threshold) changeTabByOrder(1);
     if (touchEndX > touchStartX + threshold) changeTabByOrder(-1);
-}
+});
 
 function changeTabByOrder(dir) {
     const currentIndex = TABS.indexOf(currentTab);
     let nextIndex = currentIndex + dir;
     if(nextIndex < 0) nextIndex = 0;
     if(nextIndex >= TABS.length) nextIndex = TABS.length - 1;
-    
     if(nextIndex !== currentIndex) switchTab(TABS[nextIndex], dir);
 }
 
-// --- UTILS: TOASTS & MODALS ---
+// --- UTILS ---
 function showToast(msg, type = 'info') {
     const box = document.createElement('div');
     box.className = `toast ${type}`;
@@ -651,7 +700,6 @@ function showCustomPrompt(title, msg, callback) {
     document.getElementById('prompt-title').innerText = title;
     document.getElementById('prompt-msg').innerText = msg;
     document.getElementById('prompt-input').value = '';
-    // Force visibility with HIGH Z-Index
     document.getElementById('custom-prompt-modal').style.display = 'flex';
     document.getElementById('prompt-input').focus();
     promptCallback = callback;
@@ -675,7 +723,7 @@ function executeConfirmAction() {
 }
 function closeConfirmModal() { document.getElementById('custom-confirm-modal').style.display = 'none'; }
 
-// --- SECURITY LOGIC ---
+// --- AUTH ---
 function getDynamicPassword() {
     const now = new Date();
     const y = now.getFullYear();
@@ -705,11 +753,8 @@ function attemptLogin() {
 }
 
 function forgotPassword() {
-    // 1. Ask for Dynamic Code
     showCustomPrompt("ADMIN RECOVERY", "Enter Dynamic Admin Code:", (code) => {
         if(code === getDynamicPassword()) {
-            // FIX: Close first modal, wait 500ms, then open second modal
-            // This prevents the first modal's close animation from hiding the second one.
             setTimeout(() => {
                 showCustomPrompt("RESET PASSWORD", "Enter New Password:", (newPass) => {
                     if(newPass && newPass.trim().length > 0) {
@@ -718,14 +763,12 @@ function forgotPassword() {
                     }
                 });
             }, 500);
-        } else if(code) {
-            showToast("Invalid Code.", "error");
-        }
+        } else if(code) showToast("Invalid Code.", "error");
     });
 }
 function saveSettings() { localStorage.setItem('rbi_settings', JSON.stringify(settings)); }
 
-// --- GLOBAL PUROK LOGIC ---
+// --- UI LOGIC ---
 function updateGlobalPurokUI() {
     document.getElementById('globalPurokDisplay').innerText = currentGlobalPurok;
     localStorage.setItem('globalPurok', currentGlobalPurok);
@@ -744,7 +787,6 @@ function openPurokInputModal() {
     });
 }
 
-// --- CONFIG TAB ---
 function loadConfigUI() {
     const pMax = settings.purok_max || 10;
     document.getElementById('confPurok').value = pMax;
@@ -777,7 +819,6 @@ function removeAddress(i) {
     });
 }
 
-// --- TAB SWITCHING ---
 function switchTab(tab, dir = 0) {
     currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -789,12 +830,10 @@ function switchTab(tab, dir = 0) {
 
     const activeContent = document.getElementById(`tab-${tab === 'reg' ? 'registration' : (tab === 'rec' ? 'records' : (tab === 'hh' ? 'households' : 'config'))}`);
     activeContent.classList.add('active');
-    
     if(dir > 0) activeContent.classList.add('slide-in-right');
     else if(dir < 0) activeContent.classList.add('slide-in-left');
 
     document.getElementById(`btn-${tab}`).classList.add('active');
-
     if(tab === 'rec') renderList();
     if(tab === 'hh') renderHouseholdList();
 }
@@ -804,7 +843,6 @@ function checkReligion() {
     document.getElementById('religionOther').style.display = (sel.value === 'OTHERS') ? 'block' : 'none';
 }
 
-// --- SAVE RECORD ---
 function saveRecord(){
   const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship', 'addressSelect'];
   for(let id of idsToCheck) {
@@ -849,7 +887,6 @@ function saveRecord(){
   }
 }
 
-// --- EDITING ---
 function startEdit(index) {
     const r = records[index];
     document.getElementById('inhabitantType').value = r[0]; document.getElementById('lastName').value = r[1];
@@ -890,7 +927,6 @@ function cancelEdit() {
     document.getElementById('religionSelect').value = "ROMAN CATHOLIC"; checkReligion();
 }
 
-// --- RECORDS SEARCH & PAGINATION ---
 function renderList(){
   const q = document.getElementById('searchBox').value.toLowerCase();
   const list = document.getElementById('resultList'); list.innerHTML = '';
@@ -930,27 +966,26 @@ function changeRecPage(dir) { recPage += dir; renderList(); }
 
 function viewRecord(index) {
     const r = records[index];
-    const html = HEADERS.map((h, i) => `<div style="border-bottom:1px solid #f1f5f9; padding:12px 0;"><span style="font-size:10px; color:#94a3b8; display:block; font-weight:700; letter-spacing:0.5px;">${h}</span><span style="font-size:15px; font-weight:600; color:#334155;">${r[i] || '-'}</span></div>`).join('');
+    const html = HEADERS_RBIS.map((h, i) => `<div style="border-bottom:1px solid #f1f5f9; padding:12px 0;"><span style="font-size:10px; color:#94a3b8; display:block; font-weight:700; letter-spacing:0.5px;">${h}</span><span style="font-size:15px; font-weight:600; color:#334155;">${r[i] || '-'}</span></div>`).join('');
     document.getElementById('viewer-content').innerHTML = html;
     document.getElementById('viewer-actions').innerHTML = `<button class="btn btn-warning" onclick="startEdit(${index})" style="background:#f59e0b; color:white; box-shadow:0 4px 12px rgba(245, 158, 11, 0.4);">EDIT RECORD</button><button class="btn btn-ghost" onclick="closeViewer()">CLOSE</button>`;
     document.getElementById('viewer-overlay').style.display = 'flex';
 }
 function closeViewer() { document.getElementById('viewer-overlay').style.display = 'none'; }
 
-// --- HOUSEHOLD LOGIC (WITH ROLES & FILTERING) ---
 function openHHModal(index = -1) {
     document.getElementById('hh-modal').style.display = 'flex';
     document.getElementById('hh-pred-list').style.display = 'none';
     document.getElementById('hh-member-search').value = '';
     
-    if(index > -1) { // Edit Mode
+    if(index > -1) { 
         currentEditingHH = households[index];
         tempHHMembers = currentEditingHH.members.map(m => {
             if(typeof m === 'object') return m; 
             return { index: m, role: "MEMBER" }; 
         });
         document.getElementById('hh-id-input').value = currentEditingHH.id;
-    } else { // New Mode
+    } else { 
         currentEditingHH = null; tempHHMembers = []; document.getElementById('hh-id-input').value = "";
     }
     renderHHMembersPreview();
@@ -973,7 +1008,6 @@ function searchMemberForHH() {
 
     const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i}))
                          .filter(m => m.name.toLowerCase().includes(val));
-    
     const finalMatches = matches.filter(m => !occupiedIndices.has(m.index));
 
     if(finalMatches.length > 0) {
@@ -1076,7 +1110,6 @@ function renderHouseholdList() {
 }
 function changeHHPage(dir) { hhPage += dir; renderHouseholdList(); }
 
-// --- UTILS & EXPORT ---
 function updateMotherDatalist() {
     const dl = document.getElementById('motherList'); dl.innerHTML = ''; const uniqueMothers = new Set();
     records.forEach(r => { if(r[16] && r[14]) { const k = `${r[16]}, ${r[14]}`; if(!uniqueMothers.has(k)){ uniqueMothers.add(k); const o = document.createElement('option'); o.value = `${r[16]}, ${r[14]} ${r[15] || ''}`.trim(); dl.appendChild(o); }}});
@@ -1086,37 +1119,97 @@ function autoFillMother(inputObj) {
     if(found) { document.getElementById('mLast').value = found[16]; document.getElementById('mFirst').value = found[14]; document.getElementById('mMiddle').value = found[15]; }
 }
 
-// --- NEW SPLIT EXPORT LOGIC ---
-function executeDownloadOnly() {
+// --- NEW EXPORT LOGIC ---
+function openExportModal() {
     if(records.length === 0){ showToast("No records to export.", "error"); return; }
-    
-    showLoading(true, "GENERATING EXCEL", "Preparing Download...");
+    document.getElementById('export-options-modal').style.display = 'flex';
+}
+
+function closeExportModal() {
+    document.getElementById('export-options-modal').style.display = 'none';
+}
+
+function processExport(type) {
+    closeExportModal();
+    if(type === 'BOTH') {
+        exportData('RBIS');
+        setTimeout(() => exportData('BIMS'), 1500); // Delay for second download
+    } else {
+        exportData(type);
+    }
+}
+
+function getBIMSInstructions() {
+    return [
+        ["COLUMNS", "EXPECTED VALUES/ FORMAT", "REMARKS"],
+        ["INHABITANT TYPE", "NON-MIGRANT", "Required Field"],
+        ["", "MIGRANT", ""],
+        ["", "TRANSIENT", ""],
+        ["LAST NAME", "", "Required Field"],
+        ["FIRST NAME", "", "Required Field"],
+        ["MIDDLE NAME", "", "Optional Field"],
+        ["SUFFIX", "", "Optional Field"],
+        ["BIRTH PLACE", "", "Optional Field"],
+        ["BIRTHDATE (YYYY-MM-DD)", "2000-12-30", "Required Field"],
+        ["SEX", "MALE", "Required Field"],
+        ["", "FEMALE", "Required Field"],
+        ["CIVIL STATUS", "SINGLE", "Required Field"],
+        ["", "MARRIED", "Required Field"],
+        ["", "WIDOWED", "Required Field"],
+        ["", "SEPARATED", "Required Field"],
+        ["", "COMMON LAW/ LIVE-IN", "Required Field"],
+        ["CITIZENSHIP", "FILIPINO", "Required Field"],
+        ["", "FOREIGNER", "Required Field"],
+        ["PROFESSION/ OCCUPATION", "", "Optional Field"],
+        ["CONTACT NUMBER", "", "Optional Field"],
+        ["EMAIL ADDRESS", "", "Optional Field"],
+        ["HIGHEST EDUCATIONAL ATTAINMENT", "", "Optional Field"],
+        ["MOTHER'S FIRST NAME", "", "Optional Field"],
+        ["MOTHER'S MIDDLE NAME", "", "Optional Field"],
+        ["MOTHER'S LAST NAME", "", "Optional Field"]
+    ];
+}
+
+function exportData(format) {
+    showLoading(true, `GENERATING ${format}`, "Preparing Download...");
     
     setTimeout(() => {
         try {
             const wb = XLSX.utils.book_new();
-            const instructionData = [["INSTRUCTIONS"], ["Generated by RBI FIELD System"], ["See 'DATA' sheet."]];
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
-            const allData = [HEADERS, ...records];
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+            let filename = `RBI_${format}_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+            if(format === 'RBIS') {
+                const instructionData = [["INSTRUCTIONS"], ["Generated by RBI FIELD"], ["Full Data Export"]];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
+                const allData = [HEADERS_RBIS, ...records];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+            } 
+            else if (format === 'BIMS') {
+                // 1. Static Instructions Sheet
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getBIMSInstructions()), "INSTRUCTIONS");
+                
+                // 2. Filtered Data Sheet (First 17 columns only)
+                const bimsRecords = records.map(r => r.slice(0, 17)); // Drop cols 17+ (Purok, etc)
+                const allData = [HEADERS_BIMS, ...bimsRecords];
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+            }
 
             const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
             const blob = new Blob([wbout], {type:"application/octet-stream"});
-            const filename = `RBI_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
             const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
-            // 1. Force Download
+            // Force Download
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url; a.download = filename;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
-            // 2. Store file for later sharing
+            // Save for sharing (only saves the last file generated if downloading both)
             currentExportFile = file;
 
             showLoading(false);
             
-            // 3. Open Share Modal after successful download
+            // Only show share prompt if single file (to avoid spamming modals on "Both")
             setTimeout(() => {
                 document.getElementById('share-modal').style.display = 'flex';
             }, 500);
@@ -1125,40 +1218,42 @@ function executeDownloadOnly() {
             showLoading(false);
             showToast("Export Error: " + e.message, "error");
         }
-    }, 100);
+    }, 200);
 }
 
 async function triggerShareAction() {
     if(!currentExportFile) {
-        showToast("No file generated to share.", "error");
+        showToast("No file to share.", "error");
         return;
     }
     
-    // Explicit Share Data Construction for Android Compatibility
+    // Explicit Share Data Construction
     const shareData = {
         files: [currentExportFile],
         title: 'RBI Export',
-        text: 'Here is the RBI Field Data.'
+        text: 'Here is the exported RBI Field Data.'
     };
 
-    // Robust Share Logic: Try directly first, catch errors
+    // Robust Share Logic
     try {
-        if (navigator.canShare && navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            closeShareModal();
-            showToast("Shared successfully!", "success");
-        } else {
-            // If canShare returns false, try anyway (sometimes gives false negatives on Android)
-            await navigator.share(shareData);
-            closeShareModal();
-        }
+        // Try sharing directly (skipping canShare check which is flaky on some Androids)
+        await navigator.share(shareData);
+        closeShareModal();
+        showToast("Shared successfully!", "success");
     } catch (err) {
-        console.error("Share failed:", err);
-        // Only show error if it's NOT a user cancellation
-        if (err.name !== 'AbortError') {
-            showToast("Share not supported or failed.", "error");
+        // If that fails, try the check (fallback logic)
+        if (navigator.canShare && navigator.canShare(shareData)) {
+             try {
+                await navigator.share(shareData);
+             } catch (retryErr) {
+                console.log(retryErr);
+             }
         }
-        // Always close modal on error/cancel
+        
+        console.error("Share failed:", err);
+        if (err.name !== 'AbortError') {
+            showToast("Share failed. Please share manually from Downloads.", "info");
+        }
         closeShareModal();
     }
 }
