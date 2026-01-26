@@ -7,1062 +7,880 @@
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#0a3d62">
     <meta name="application-name" content="RBI System">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then((reg) => {
+             console.log('Service Worker Registered');
+          })
+          .catch(err => console.log('SW Registration failed', err));
+      }
+    </script>
+
     <style>
-        /* --- MODERN DESIGN VARIABLES --- */
-        :root {
-            --primary: #0f172a;       /* Slate 900 */
-            --accent: #3b82f6;        /* Blue 500 */
-            --accent-hover: #2563eb;  /* Blue 600 */
-            --bg: #f1f5f9;            /* Slate 100 */
-            --card: #ffffff;
-            --text-main: #334155;     /* Slate 700 */
-            --text-light: #64748b;    /* Slate 500 */
-            --danger: #ef4444;        /* Red 500 */
-            --success: #22c55e;       /* Green 500 */
-            --warning: #f59e0b;       /* Amber 500 */
-            --male: #3b82f6;
-            --female: #ec4899;
+        /* HARD RESET & MOBILE STYLES */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #eef1f5; -webkit-tap-highlight-color: transparent; }
+
+        /* SECURITY OVERLAY */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0a3d62; z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; }
+        .login-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 85%; max-width: 350px; color: #333; text-align: center; }
+
+        /* VIEWER MODAL */
+        #viewer-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: flex-end; }
+        .viewer-card { background: #fff; width: 100%; max-width: 500px; height: 90vh; border-radius: 20px 20px 0 0; padding: 20px; overflow-y: auto; position: relative; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .app {
+            max-width: 450px; 
+            margin: 0 auto;
+            background: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden; }
-        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-main); -webkit-tap-highlight-color: transparent; }
+        header {
+            background: #0a3d62;
+            color: #ffffff;
+            padding: 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
 
-        /* --- UI COMPONENTS --- */
-        .context-bar {
-            background: var(--primary);
+        /* TABS STYLING */
+        .tab-container {
+            display: flex;
+            background: #0a3d62;
+            padding-bottom: 10px;
+        }
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
             color: white;
-            padding: 12px 20px;
+            border-bottom: 3px solid #1e90ff;
+        }
+
+        h3 { margin: 0; font-size: 18px; }
+        small { opacity: 0.8; font-size: 12px; }
+
+        .section { padding: 16px; border-bottom: 8px solid #f0f2f5; }
+
+        .form-group { width: 100%; margin-bottom: 14px; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .req { color: red; margin-left: 3px; } /* Asterisk for required */
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+            background: #fff;
+        }
+
+        input:focus, select:focus { border-color: #0a3d62; outline: none; }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 8px;
+            background: #1e90ff;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button:active { transform: scale(0.98); }
+
+        /* Button Colors */
+        button.secondary { background: #27ae60; } /* Excel Green */
+        button.danger { background: #e74c3c; } 
+        button.close-btn { background: #e74c3c; margin-bottom: 20px; } 
+        button.edit-btn { background: #f39c12; margin-bottom: 10px; color: white; } 
+        button.add-small { width: auto; padding: 8px 15px; font-size: 12px; margin-top: 0; }
+
+        /* SCROLLABLE LIST - Showing approx 4 records */
+        .list { margin-top: 10px; max-height: 280px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 8px; }
+
+        .card {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            position: sticky; top: 0; z-index: 900;
-        }
-        
-        .purok-selector-btn {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
             cursor: pointer;
-            transition: 0.2s;
-            display: flex; align-items: center; gap: 8px;
         }
-        .purok-selector-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.98); }
-        .purok-badge { background: var(--warning); color: #000; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 12px; }
+        .card:active { background: #f9f9f9; }
+        .card span { font-weight: 500; }
+        .card small { color: #888; }
 
-        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; min-height: 100vh; position: relative; }
+        .detail-row { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .detail-label { font-size: 11px; color: #888; text-transform: uppercase; display: block; }
+        .detail-val { font-size: 14px; font-weight: 600; color: #333; }
 
-        /* TAB NAV */
-        .tab-nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 60px; z-index: 800; overflow-x: auto; }
-        .tab-btn {
-            flex: 1; border: none; background: none; padding: 15px;
-            font-size: 12px; font-weight: 600; color: var(--text-light);
-            cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; white-space: nowrap;
+        /* SECTORAL TOGGLES GRID */
+        .sector-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
         }
-        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-        /* ANIMATIONS FOR SWIPE */
-        .content-area { padding: 20px; display: none; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; }
-        .content-area.active { display: block; opacity: 1; }
-        
-        .slide-in-right { animation: slideInRight 0.3s forwards; }
-        .slide-in-left { animation: slideInLeft 0.3s forwards; }
-        
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-        .card-section {
-            background: var(--card); padding: 20px; border-radius: 16px;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); margin-bottom: 20px;
+        .toggle-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .section-title {
-            color: var(--primary); font-size: 15px; font-weight: 700;
-            border-left: 4px solid var(--accent); padding-left: 10px; margin: 0 0 15px 0;
-            text-transform: uppercase;
+        .toggle-item label { margin: 0; font-size: 12px; cursor: pointer; }
+        .toggle-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #0a3d62; }
+
+        /* CONFIG LIST ITEMS */
+        .config-item {
+            display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;
         }
 
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .req { color: var(--danger); margin-left: 2px; }
+        footer {
+            text-align: center;
+            font-size: 12px;
+            padding: 20px;
+            color: #666;
+            background: #f8f9fa;
+        }
 
-        input, select {
-            width: 100%; padding: 12px 14px;
-            border-radius: 8px; border: 1px solid #cbd5e1;
-            font-size: 14px; background: #f8fafc; color: #1e293b;
-            transition: 0.2s; text-transform: uppercase;
-        }
-        input:focus, select:focus { border-color: var(--accent); background: white; outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-
-        .btn {
-            width: 100%; padding: 14px; border-radius: 10px; border: none;
-            font-size: 14px; font-weight: 700; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-            text-transform: uppercase; letter-spacing: 0.5px; transition: transform 0.1s;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4); }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-ghost { background: #e2e8f0; color: var(--text-main); }
-        .btn-small { width: auto; padding: 8px 16px; font-size: 12px; }
-
-        .sector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .toggle-card {
-            background: #fff; border: 1px solid #e2e8f0; padding: 12px;
-            border-radius: 8px; display: flex; align-items: center; justify-content: space-between;
-        }
-        input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
-
-        /* --- TOAST NOTIFICATIONS --- */
-        #toast-container {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 9999; display: flex; flex-direction: column; gap: 10px; align-items: center;
-        }
-        .toast {
-            background: #333; color: white; padding: 12px 24px; border-radius: 50px;
-            font-size: 14px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
-            animation: slideUpFade 0.3s ease-out; display: flex; align-items: center; gap: 10px;
-        }
-        .toast.success { background: #22c55e; }
-        .toast.error { background: #ef4444; }
-        .toast.info { background: #3b82f6; }
-        @keyframes slideUpFade { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        /* --- MODALS --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
-            z-index: 2000; display: none; align-items: center; justify-content: center;
-        }
-        .modal-box {
-            background: white; width: 85%; max-width: 380px;
-            border-radius: 20px; padding: 25px; text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-height: 90vh; overflow-y: auto;
-        }
-        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        /* LOADING SPINNER */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px;
-            border-radius: 50%; border-left-color: var(--accent);
-            animation: spin 1s linear infinite; margin: 0 auto 15px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* LISTS */
-        .record-card {
-            background: white; border-radius: 8px; padding: 10px 15px; margin-bottom: 8px;
-            border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;
-        }
-        .record-card h5 { margin: 0; font-size: 14px; color: var(--primary); font-weight: 600; }
-        .record-card p { margin: 1px 0 0; font-size: 11px; color: var(--text-light); }
-        
-        .pred-list {
-            list-style: none; padding: 0; margin: 0; border: 1px solid #cbd5e1; border-top: none;
-            max-height: 150px; overflow-y: auto; background: white; border-radius: 0 0 8px 8px; display: none;
-            text-align: left;
-        }
-        .pred-item { padding: 10px; font-size: 13px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
-        .pred-item:hover { background: #f8fafc; }
-
-        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
-        .page-btn { padding: 8px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 12px; }
-        .page-btn.disabled { opacity: 0.5; cursor: not-allowed; }
-        .config-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
-        .hidden { display: none; }
-
-        /* --- PWA INSTALL BUTTON STYLES --- */
-        .install-float-btn {
-            position: fixed; bottom: 25px; right: 20px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white; padding: 12px 20px; border-radius: 50px;
-            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.6);
-            display: none; /* Hidden by default, shown via JS */
-            z-index: 10000; font-weight: bold; font-size: 14px;
-            align-items: center; gap: 8px; cursor: pointer;
-            border: 2px solid white;
-            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
+        /* Utility to hide/show tabs */
+        .hidden-tab { display: none; }
     </style>
 </head>
 <body>
 
-<button id="install-btn" class="install-float-btn">
-    <i class="fas fa-download"></i> INSTALL APP
-</button>
-
-<div id="toast-container"></div>
-
-<div id="login-overlay" class="modal-overlay" style="display:flex; z-index:9999;">
-    <div class="modal-box">
-        <div style="color:var(--primary); font-size:40px; margin-bottom:10px;"><i class="fas fa-shield-alt"></i></div>
-        <h3 style="margin:0; color:var(--primary);">SECURITY CHECK</h3>
-        <p style="font-size:12px; color:#666; margin-bottom:20px;" id="login-msg">Enter System Password</p>
-        <input type="password" id="login-pass" style="text-align:center; margin-bottom:15px;" placeholder="PASSWORD">
-        <button class="btn btn-primary" onclick="attemptLogin()">UNLOCK SYSTEM</button>
-        <div style="margin-top:15px; font-size:11px; cursor:pointer; color:var(--accent);" onclick="forgotPassword()">Reset Password</div>
-    </div>
-</div>
-
-<div id="loading-modal" class="modal-overlay" style="z-index:9998;">
-    <div class="modal-box">
-        <div class="spinner"></div>
-        <h3 id="loading-title" style="margin:0; color:var(--primary);">PROCESSING...</h3>
-        <p id="loading-desc" style="font-size:13px; color:#666; margin: 10px 0 0 0;">Please wait.</p>
-    </div>
-</div>
-
-<div id="custom-prompt-modal" class="modal-overlay">
-    <div class="modal-box">
-        <h3 id="prompt-title" style="margin:0; color:var(--primary);">INPUT</h3>
-        <p id="prompt-msg" style="font-size:13px; color:#666; margin: 10px 0 15px 0;"></p>
-        <input id="prompt-input" type="text" style="text-align:center; margin-bottom:15px;">
-        <div style="display:flex; gap:10px;">
-            <button class="btn btn-ghost" onclick="closePromptModal()">CANCEL</button>
-            <button class="btn btn-primary" onclick="submitPromptModal()">CONFIRM</button>
-        </div>
-    </div>
-</div>
-
-<div id="custom-confirm-modal" class="modal-overlay">
-    <div class="modal-box">
-        <div style="color:var(--warning); font-size:40px; margin-bottom:10px;"><i class="fas fa-exclamation-circle"></i></div>
-        <h3 id="confirm-title" style="margin:0;">CONFIRM ACTION</h3>
-        <p id="confirm-msg" style="font-size:13px; color:#666; margin: 10px 0 20px 0;"></p>
-        <div style="display:flex; gap:10px;">
-            <button class="btn btn-ghost" onclick="closeConfirmModal()">CANCEL</button>
-            <button class="btn btn-primary" onclick="executeConfirmAction()">CONFIRM</button>
-        </div>
-    </div>
-</div>
-
-<div id="hh-modal" class="modal-overlay">
-    <div class="modal-box" style="width: 95%; max-width: 450px;">
-        <h4 style="margin-top:0; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">HOUSEHOLD MANAGER</h4>
+<div id="login-overlay">
+    <div class="login-box">
+        <h4 style="margin-top:0; color:#0a3d62;">SECURITY CHECK</h4>
+        <p style="font-size:12px; color:#666; margin-bottom:15px;" id="login-msg">Enter Your Password</p>
         
-        <div class="form-group" style="text-align:left;">
-            <label>Household Number / ID</label>
-            <input id="hh-id-input" placeholder="e.g., 2024-001">
-        </div>
-
-        <div style="text-align:left; margin-bottom:15px;">
-            <label>Add Members (Search)</label>
-            <input id="hh-member-search" oninput="searchMemberForHH()" placeholder="Type Name...">
-            <ul id="hh-pred-list" class="pred-list"></ul>
-        </div>
-
-        <div style="text-align:left;">
-            <label>Current Members & Roles:</label>
-            <div id="hh-members-display" style="border:1px solid #eee; padding:10px; border-radius:8px; max-height:200px; overflow-y:auto; background:#f8fafc;">
-                <small>No members added.</small>
-            </div>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn btn-ghost" onclick="closeHHModal()">CLOSE</button>
-            <button class="btn btn-success" onclick="saveHousehold()">SAVE HOUSEHOLD</button>
-        </div>
+        <input type="password" id="login-pass" 
+               style="text-align:center; margin-bottom:10px;" 
+               placeholder="Password"
+               onkeydown="if(event.key === 'Enter') attemptLogin()">
+               
+        <button onclick="attemptLogin()">LOGIN</button>
+        
+        <div style="margin-top:10px; font-size:11px; cursor:pointer; color:#1e90ff;" onclick="forgotPassword()">Forgot Password?</div>
     </div>
 </div>
 
-<div class="app-container">
+<div class="app">
+<header>
+    <h3>RBI System</h3>
+    <small>Barangay Inhabitant Registration</small>
+</header>
 
-    <div class="context-bar">
-        <div class="context-info">
-            <h4>RBI SYSTEM</h4>
-            <small>SEC JERICK™</small>
+<div class="tab-container">
+    <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg">FORM</button>
+    <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec">RECORDS</button>
+    <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf">CONFIG</button>
+</div>
+
+<div id="tab-registration">
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">I. Personal Information</h4>
+        
+        <div class="form-group"><label>Inhabitant Type<span class="req">*</span></label><select id="inhabitantType"><option>NON-MIGRANT</option><option>MIGRANT</option><option>TRANSIENT</option></select></div>
+        
+        <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="e.g. Dela Cruz"></div>
+        <div class="form-group"><label>First Name<span class="req">*</span></label><input id="firstName" placeholder="e.g. Juan"></div>
+        <div class="form-group"><label>Middle Name<span class="req">*</span></label><input id="middleName"></div>
+        <div class="form-group"><label>Suffix</label><input id="suffix" placeholder="e.g. Jr, III (Optional)"></div>
+        <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
+        <div class="form-group"><label>Birthday<span class="req">*</span></label><input type="date" id="birthDate"></div>
+        <div class="form-group"><label>Sex<span class="req">*</span></label><select id="sex"><option>MALE</option><option>FEMALE</option></select></div>
+        
+        <div class="form-group"><label>Civil Status<span class="req">*</span></label><select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select></div>
+        <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
+
+        <div class="form-group">
+            <label>Religion<span class="req">*</span></label>
+            <select id="religionSelect" onchange="checkReligion()">
+                <option value="ROMAN CATHOLIC">ROMAN CATHOLIC</option>
+                <option value="IGLESIA NI CRISTO">IGLESIA NI CRISTO</option>
+                <option value="ISLAM">ISLAM</option>
+                <option value="EVANGELICALS">EVANGELICALS</option>
+                <option value="BAPTIST">BAPTIST</option>
+                <option value="SEVENTH DAY ADVENTIST">SEVENTH DAY ADVENTIST</option>
+                <option value="AGLIPAYAN">AGLIPAYAN</option>
+                <option value="JEHOVAH'S WITNESS">JEHOVAH'S WITNESS</option>
+                <option value="OTHERS">OTHERS (PLEASE SPECIFY)</option>
+            </select>
+            <input id="religionOther" placeholder="Type Religion Here..." style="display:none; margin-top:5px; border-color:#1e90ff;">
         </div>
-        <div class="purok-selector-btn" onclick="openPurokInputModal()">
-            <span>PUROK</span>
-            <span class="purok-badge" id="globalPurokDisplay">1</span>
-            <i class="fas fa-chevron-down" style="font-size:10px;"></i>
+
+        <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
+    </div>
+
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">II. Address Details</h4>
+        <div class="form-group">
+            <label>Purok / Zone (1-<span id="lbl-max-purok"></span>)<span class="req">*</span></label>
+            <select id="addressPurok"></select>
+        </div>
+        <div class="form-group">
+            <label>Sitio<span class="req">*</span></label>
+            <select id="addressSitio"><option value="">Select Sitio...</option></select>
+        </div>
+        <div class="form-group">
+            <label>Street Name</label>
+            <select id="addressStreet"><option value="">Select Street (Optional)...</option></select>
         </div>
     </div>
 
-    <div class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg"><i class="fas fa-user-plus"></i> FORM</button>
-        <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec"><i class="fas fa-list"></i> RECORDS</button>
-        <button class="tab-btn" onclick="switchTab('hh')" id="btn-hh"><i class="fas fa-home"></i> HOUSEHOLDS</button>
-        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> CONFIG</button>
-    </div>
-
-    <div id="tab-registration" class="content-area active">
-        <div id="edit-banner" style="background:var(--warning); color:white; padding:10px; border-radius:8px; margin-bottom:15px; display:none; text-align:center; font-size:13px; font-weight:bold;">
-            <i class="fas fa-edit"></i> EDITING RECORD - PUROK <span id="edit-purok-indicator"></span>
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0; border-bottom:1px solid #ddd; padding-bottom:5px;">III. Sectoral & Contact</h4>
+        
+        <label style="margin-bottom:10px;">Sectoral Group Membership:</label>
+        <div class="sector-grid">
+            <div class="toggle-item"><label for="isOSY">OSY</label><input type="checkbox" id="isOSY"></div>
+            <div class="toggle-item"><label for="isPWD">PWD</label><input type="checkbox" id="isPWD"></div>
+            <div class="toggle-item"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
+            <div class="toggle-item"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
+            <div class="toggle-item"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
         </div>
 
-        <div class="card-section">
-            <h5 class="section-title">1. PERSONAL DATA</h5>
-            <div class="form-group">
-                <label>Inhabitant Type<span class="req">*</span></label>
-                <select id="inhabitantType"><option>NON-MIGRANT</option><option>MIGRANT</option><option>TRANSIENT</option></select>
-            </div>
-            <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="DELA CRUZ"></div>
-            <div class="form-group"><label>First Name<span class="req">*</span></label><input id="firstName" placeholder="JUAN"></div>
-            <div class="form-group"><label>Middle Name</label><input id="middleName" placeholder="(OPTIONAL)"></div>
-            <div class="form-group"><label>Suffix</label><input id="suffix" placeholder="JR, III (OPTIONAL)"></div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                <div class="form-group"><label>Birthday<span class="req">*</span></label><input type="date" id="birthDate"></div>
-                <div class="form-group"><label>Sex<span class="req">*</span></label><select id="sex"><option>MALE</option><option>FEMALE</option></select></div>
-            </div>
-            <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
-            <div class="form-group"><label>Civil Status<span class="req">*</span></label>
-                <select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select>
-            </div>
-            <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
-            <div class="form-group">
-                <label>Religion (Select/Type Other)<span class="req">*</span></label>
-                <select id="religionSelect" onchange="checkReligion()">
-                    <option value="ROMAN CATHOLIC">ROMAN CATHOLIC</option>
-                    <option value="IGLESIA NI CRISTO">IGLESIA NI CRISTO</option>
-                    <option value="ISLAM">ISLAM</option>
-                    <option value="EVANGELICALS">EVANGELICALS</option>
-                    <option value="BAPTIST">BAPTIST</option>
-                    <option value="SEVENTH DAY ADVENTIST">SEVENTH DAY ADVENTIST</option>
-                    <option value="AGLIPAYAN">AGLIPAYAN</option>
-                    <option value="JEHOVAH'S WITNESS">JEHOVAH'S WITNESS</option>
-                    <option value="OTHERS">OTHERS (PLEASE SPECIFY)</option>
-                </select>
-                <input id="religionOther" placeholder="TYPE RELIGION HERE..." style="display:none; margin-top:5px; border-color:var(--accent);">
-            </div>
-            <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
+        <div class="form-group"><label>Contact Number (Optional)</label><input id="contact" type="tel"></div>
+        <div class="form-group"><label>Email Address (Optional)</label><input id="email" type="email"></div>
+        
+        <div class="form-group"><label>Educational Attainment<span class="req">*</span></label>
+            <select id="education">
+                <option>NONE</option>
+                <option>ELEMENTARY LEVEL</option>
+                <option>ELEMENTARY GRADUATE</option>
+                <option>HIGH SCHOOL LEVEL</option>
+                <option>HIGH SCHOOL GRADUATE</option>
+                <option>SENIOR HIGH SCHOOL LEVEL</option>
+                <option>SENIOR HIGH SCHOOL GRADUATE</option>
+                <option>COLLEGE LEVEL</option>
+                <option>COLLEGE GRADUATE</option>
+                <option>VOCATIONAL</option>
+                <option>POST GRADUATE</option>
+            </select>
         </div>
-
-        <div class="card-section">
-            <h5 class="section-title">2. ADDRESS & EDUCATION</h5>
-            <div class="form-group">
-                <label>Additional Address / Landmark<span class="req">*</span></label>
-                <select id="addressSelect"><option value="">SELECT ADDRESS...</option></select>
-                <small style="color:var(--accent); cursor:pointer;" onclick="switchTab('conf')"> + Manage Addresses in Config</small>
-            </div>
-            <div class="form-group"><label>Educational Attainment</label>
-                <select id="education">
-                    <option>NONE</option><option>ELEMENTARY LEVEL</option><option>ELEMENTARY GRADUATE</option>
-                    <option>HIGH SCHOOL LEVEL</option><option>HIGH SCHOOL GRADUATE</option><option>SENIOR HIGH SCHOOL LEVEL</option>
-                    <option>SENIOR HIGH SCHOOL GRADUATE</option><option>COLLEGE LEVEL</option><option>COLLEGE GRADUATE</option>
-                    <option>VOCATIONAL</option><option>POST GRADUATE</option>
-                </select>
-            </div>
-            <div class="form-group"><label>Contact Number</label><input id="contact" type="tel"></div>
-        </div>
-
-        <div class="card-section">
-            <h5 class="section-title">3. SECTORAL MEMBERSHIP</h5>
-            <div class="sector-grid">
-                <div class="toggle-card"><label for="isOSY">OSY</label><input type="checkbox" id="isOSY"></div>
-                <div class="toggle-card"><label for="isPWD">PWD</label><input type="checkbox" id="isPWD"></div>
-                <div class="toggle-card"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
-                <div class="toggle-card"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
-                <div class="toggle-card"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
-            </div>
-        </div>
-
-        <div class="card-section" style="background:#f8fafc; border:1px dashed #cbd5e1;">
-            <h5 class="section-title" style="border-left-color:var(--primary);">4. MOTHER'S MAIDEN NAME</h5>
-            <div class="form-group">
-               <input id="motherSearch" list="motherList" onchange="autoFillMother(this)" placeholder="SEARCH EXISTING MOTHERS..." style="border-color:var(--accent);">
+        
+        <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
+            <label style="color:#0a3d62;">Mother's Maiden Name<span class="req">*</span></label>
+            
+            <div class="form-group" style="background:#f0f8ff; padding:10px; border-radius:8px; border:1px solid #bde0ff;">
+               <label style="color:#1e90ff; margin-bottom:4px; font-size:11px;">AUTO-FILL FROM RECORDED MOTHERS</label>
+               <input id="motherSearch" list="motherList" onchange="autoFillMother(this)" placeholder="Search Mother's Name..." style="border:1px solid #1e90ff;">
                <datalist id="motherList"></datalist>
             </div>
-            <div class="form-group"><input id="mFirst" placeholder="MOTHER'S FIRST NAME"></div>
-            <div class="form-group"><input id="mMiddle" placeholder="MOTHER'S MIDDLE NAME"></div>
-            <div class="form-group"><input id="mLast" placeholder="MOTHER'S LAST NAME"></div>
+
+            <div class="form-group"><input id="mFirst" placeholder="Mother's First Name"></div>
+            <div class="form-group"><input id="mMiddle" placeholder="Mother's Middle Name"></div>
+            <div class="form-group"><input id="mLast" placeholder="Mother's Last Name"></div>
         </div>
 
-        <div style="display:flex; gap:10px; margin-top:20px;">
-            <button id="btn-cancel" class="btn btn-danger" onclick="cancelEdit()" style="display:none;">CANCEL EDIT</button>
-            <button id="btn-save" class="btn btn-primary" onclick="saveRecord()"><i class="fas fa-save"></i> SAVE RECORD</button>
+        <div style="display:flex; gap:10px;">
+            <button id="btn-cancel" onclick="cancelEdit()" style="display:none; background:#e74c3c; width:40%;">CANCEL</button>
+            <button id="btn-save" onclick="saveRecord()">SAVE RECORD</button>
         </div>
     </div>
+</div>
 
-    <div id="tab-records" class="content-area">
+<div id="tab-records" class="hidden-tab">
+    <div class="section">
         <div class="form-group">
-            <input id="searchBox" oninput="renderList()" placeholder="SEARCH BY NAME..." style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <label>Search Records (Last or First Name)</label>
+            <input id="searchBox" oninput="renderList()" placeholder="Type Name to search...">
         </div>
-        <div id="resultList" style="margin-top:15px;"></div>
+        <div class="list" id="resultList"></div>
+    </div>
+
+    <div class="section">
+        <label>Export Data</label>
+        <p style="font-size:12px; color:#666; margin-bottom:10px;">
+            Downloads BIMS compatible file (Sheet 1: Instructions, Sheet 2: Data).
+        </p>
+        <button class="secondary" onclick="exportExcel()">Export Excel File</button>
+    </div>
+</div>
+
+<div id="tab-config" class="hidden-tab">
+    <div class="section">
+        <h4 style="color:#0a3d62; margin-top:0;">System Configuration</h4>
+        <p style="font-size:12px; color:#666;">Set up your Barangay's geography data here.</p>
         
-        <div class="pagination">
-            <button id="btn-prev-rec" class="page-btn" onclick="changeRecPage(-1)">Prev</button>
-            <span id="rec-page-indicator" style="align-self:center; font-size:12px;">Page 1</span>
-            <button id="btn-next-rec" class="page-btn" onclick="changeRecPage(1)">Next</button>
+        <div class="form-group">
+            <label>Max Purok Number (1-N)</label>
+            <input type="number" id="confPurok" placeholder="Default: 10">
+            <button class="add-small" onclick="savePurokConf()">Set Purok Max</button>
         </div>
 
-        <div class="card-section" style="margin-top:20px; text-align:center;">
-            <button class="btn btn-success" onclick="prepareExcelExport()"><i class="fas fa-file-excel"></i> EXPORT / SHARE EXCEL</button>
+        <div class="form-group" style="margin-top:20px;">
+            <label>Manage Sitios</label>
+            <div style="display:flex; gap:5px;">
+                <input id="newSitio" placeholder="Enter Sitio Name">
+                <button class="add-small" onclick="addItem('sitios', 'newSitio')">Add</button>
+            </div>
+            <div class="list" id="listSitios" style="max-height:150px;"></div>
+        </div>
+
+        <div class="form-group" style="margin-top:20px;">
+            <label>Manage Streets</label>
+            <div style="display:flex; gap:5px;">
+                <input id="newStreet" placeholder="Enter Street Name">
+                <button class="add-small" onclick="addItem('streets', 'newStreet')">Add</button>
+            </div>
+            <div class="list" id="listStreets" style="max-height:150px;"></div>
         </div>
     </div>
-
-    <div id="tab-households" class="content-area">
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <input id="searchHH" oninput="renderHouseholdList()" placeholder="Search Household or Member..." style="flex:1;">
-            <button class="btn btn-primary" style="width:auto;" onclick="openHHModal()"><i class="fas fa-plus"></i></button>
-        </div>
-        <div id="hh-list-container"></div>
-        <div class="pagination">
-            <button id="btn-prev-hh" class="page-btn" onclick="changeHHPage(-1)">Prev</button>
-            <span id="hh-page-indicator" style="align-self:center; font-size:12px;">Page 1</span>
-            <button id="btn-next-hh" class="page-btn" onclick="changeHHPage(1)">Next</button>
-        </div>
-    </div>
-
-    <div id="tab-config" class="content-area">
-        <div class="card-section">
-            <h5 class="section-title">SYSTEM CONFIGURATION</h5>
-            <div class="form-group">
-                <label>Set Maximum Purok Number</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="confPurok" placeholder="Default: 10">
-                    <button class="btn btn-primary" style="width:auto;" onclick="savePurokConf()">UPDATE</button>
-                </div>
-            </div>
-            <div class="form-group" style="margin-top:20px;">
-                <label>Manage Additional Addresses</label>
-                <div style="display:flex; gap:5px;">
-                    <input id="newAddress" placeholder="e.g. UPPER BASAK">
-                    <button class="btn btn-small btn-success" onclick="addAddress()">ADD</button>
-                </div>
-                <div class="list" id="listAddresses" style="max-height:150px; margin-top:10px;"></div>
-            </div>
-            <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-            <div class="form-group">
-                 <label>Admin Password Management</label>
-                 <button class="btn btn-ghost" onclick="forgotPassword()">Reset Admin Password</button>
-            </div>
-        </div>
-    </div>
-
 </div>
 
-<input type="hidden" id="tempPurokTarget">
+<footer>© SEC JERICK™ | Modern RBI System (For Field Use)</footer>
+</div>
 
-<div id="viewer-overlay" class="modal-overlay" onclick="if(event.target===this) closeViewer()">
-    <div class="viewer-card" style="background:white; width:100%; max-width:500px; height:90vh; border-radius:20px 20px 0 0; position:absolute; bottom:0; padding:20px; overflow-y:auto; animation: slideUp 0.3s;">
-        <h3 style="color:var(--primary); border-bottom:2px solid var(--accent); padding-bottom:10px; margin-bottom:15px;">RECORD DETAILS</h3>
+<div id="viewer-overlay" onclick="if(event.target===this) closeViewer()">
+    <div class="viewer-card">
+        <h3 style="color:#0a3d62; border-bottom:2px solid #1e90ff; padding-bottom:10px; margin-bottom:15px;">Record Details</h3>
         <div id="viewer-content"></div>
-        <div id="viewer-actions" style="margin-top:20px; display:flex; flex-direction:column; gap:10px;"></div>
+        <div id="viewer-actions" style="margin-top:20px;"></div>
     </div>
 </div>
-
-<style> @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } </style>
 
 <script>
-// --- PWA INSTALLATION & SERVICE WORKER LOGIC (NEW FEATURE) ---
-let deferredPrompt;
-const installBtn = document.getElementById('install-btn');
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-    .then(() => console.log('Service Worker Registered'))
-    .catch((err) => console.log('SW Fail', err));
-}
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show the custom force install button
-    installBtn.style.display = 'flex';
-});
-
-installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`User response: ${outcome}`);
-        deferredPrompt = null;
-        installBtn.style.display = 'none'; // Hide button after action
-    }
-});
-
-window.addEventListener('appinstalled', () => {
-    installBtn.style.display = 'none'; // Ensure hidden if installed
-    showToast("App Installed Successfully!", "success");
-});
-
-// --- EXISTING CONFIGURATION ---
+// --- CONFIGURATION ---
+// Extended Headers to include new fields
 const HEADERS = [
     "INHABITANT TYPE", "LAST NAME", "FIRST NAME", "MIDDLE NAME", "SUFFIX", 
     "BIRTH PLACE", "BIRTHDATE (YYYY-MM-DD)", "SEX", "CIVIL STATUS", "CITIZENSHIP", 
     "PROFESSION/ OCCUPATION", "CONTACT NUMBER", "EMAIL ADDRESS", 
     "HIGHEST EDUCATIONAL ATTAINMENT", "MOTHER'S FIRST NAME", 
     "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME",
-    "PUROK", "ADDITIONAL ADDRESS", "RELIGION", 
+    "PUROK", "SITIO", "STREET", "RELIGION",
     "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
 ];
 
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
-// HouseHold Structure: { id: "...", members: [{index: 1, role: "HEAD"}] }
-let households = JSON.parse(localStorage.getItem('rbiHouseholds')) || [];
+// Extended settings object default
 let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
-    custom_password: '', purok_max: 10, addresses: []
+    custom_password: '', 
+    purok_max: 10,
+    sitios: [],
+    streets: [] 
 };
-
-// Global State
-let currentGlobalPurok = localStorage.getItem('globalPurok') || "1";
 let editingIndex = -1; 
-let hhPage = 1;
-let recPage = 1;
-let currentEditingHH = null; 
-let tempHHMembers = []; 
-let promptCallback = null;
-let confirmCallback = null;
-
-const TABS = ['reg', 'rec', 'hh', 'conf'];
-let currentTab = 'reg';
-
-// --- TOUCH GESTURE LOGIC ---
-let touchStartX = 0;
-let touchEndX = 0;
-
-document.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-});
-
-document.addEventListener('touchend', e => {
-    touchEndX = e.changedTouches[0].screenX;
-    handleSwipe();
-});
-
-function handleSwipe() {
-    const threshold = 50; // Min Swipe distance
-    if (touchEndX < touchStartX - threshold) {
-        // Swiped Left -> Next Tab
-        changeTabByOrder(1);
-    }
-    if (touchEndX > touchStartX + threshold) {
-        // Swiped Right -> Prev Tab
-        changeTabByOrder(-1);
-    }
-}
-
-function changeTabByOrder(dir) {
-    const currentIndex = TABS.indexOf(currentTab);
-    let nextIndex = currentIndex + dir;
-    if(nextIndex < 0) nextIndex = 0;
-    if(nextIndex >= TABS.length) nextIndex = TABS.length - 1;
-    
-    if(nextIndex !== currentIndex) {
-        switchTab(TABS[nextIndex], dir);
-    }
-}
-
-// --- UTILS: TOASTS & MODALS ---
-function showToast(msg, type = 'info') {
-    const box = document.createElement('div');
-    box.className = `toast ${type}`;
-    let icon = type === 'success' ? '<i class="fas fa-check-circle"></i>' : (type === 'error' ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-info-circle"></i>');
-    box.innerHTML = `${icon} <span>${msg}</span>`;
-    document.getElementById('toast-container').appendChild(box);
-    setTimeout(() => { box.style.opacity = '0'; setTimeout(() => box.remove(), 300); }, 3000);
-}
-
-function showLoading(show, title="PROCESSING...", desc="Please wait.") {
-    document.getElementById('loading-title').innerText = title;
-    document.getElementById('loading-desc').innerText = desc;
-    document.getElementById('loading-modal').style.display = show ? 'flex' : 'none';
-}
-
-function showCustomPrompt(title, msg, callback) {
-    document.getElementById('prompt-title').innerText = title;
-    document.getElementById('prompt-msg').innerText = msg;
-    document.getElementById('prompt-input').value = '';
-    document.getElementById('custom-prompt-modal').style.display = 'flex';
-    document.getElementById('prompt-input').focus();
-    promptCallback = callback;
-}
-function submitPromptModal() {
-    const val = document.getElementById('prompt-input').value;
-    document.getElementById('custom-prompt-modal').style.display = 'none';
-    if(promptCallback) promptCallback(val);
-}
-function closePromptModal() { document.getElementById('custom-prompt-modal').style.display = 'none'; }
-
-function showCustomConfirm(title, msg, callback) {
-    document.getElementById('confirm-title').innerText = title;
-    document.getElementById('confirm-msg').innerText = msg;
-    document.getElementById('custom-confirm-modal').style.display = 'flex';
-    confirmCallback = callback;
-}
-function executeConfirmAction() {
-    document.getElementById('custom-confirm-modal').style.display = 'none';
-    if(confirmCallback) confirmCallback();
-}
-function closeConfirmModal() { document.getElementById('custom-confirm-modal').style.display = 'none'; }
 
 // --- SECURITY LOGIC ---
 function getDynamicPassword() {
     const now = new Date();
+    const m = now.getMonth();
+    const d = now.getDate();
     const y = now.getFullYear();
     const onejan = new Date(y, 0, 1);
     const w = Math.ceil((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-    return `RBI-${now.getMonth()}${now.getDate()}${y}${w*2}`;
+    return `RBI-${m}${d}${y}${w*2}`;
 }
 
 window.onload = function() {
-    if(!settings.custom_password) document.getElementById('login-msg').innerText = "Create Your Password to Start";
-    updateMotherDatalist(); loadConfigUI(); updateGlobalPurokUI();
+    if(!settings.custom_password) {
+        document.getElementById('login-msg').innerText = "Create Your Password to Start";
+    }
+    updateMotherDatalist(); 
+    loadConfigUI(); // Load Dropdowns
+    renderConfigLists(); // Load Config Tab Lists
 }
 
 function attemptLogin() {
     const input = document.getElementById('login-pass').value;
+    
     if (!settings.custom_password) {
         if(input.trim().length > 0) {
             settings.custom_password = input.trim();
-            saveSettings(); showToast("Password Set! Logged in.", "success");
+            saveSettings();
+            alert("Password Set! You are now logged in.");
             document.getElementById('login-overlay').style.display = 'none';
-        } else showToast("Create a password.", "error");
+        } else {
+            alert("Please create a password.");
+        }
         return;
     }
+
     if (input === settings.custom_password) {
         document.getElementById('login-overlay').style.display = 'none';
-    } else showToast("Incorrect Password.", "error");
+    } else {
+        alert("Incorrect Password.");
+    }
 }
 
 function forgotPassword() {
-    showCustomPrompt("ADMIN RECOVERY", "Enter Dynamic Admin Code:", (code) => {
-        if(code === getDynamicPassword()) {
-            setTimeout(() => {
-                showCustomPrompt("RESET PASSWORD", "Enter New Password:", (newPass) => {
-                    if(newPass && newPass.trim().length > 0) {
-                        settings.custom_password = newPass.trim();
-                        saveSettings(); showToast("Password Reset Successfully.", "success");
-                    }
-                });
-            }, 300);
-        } else if(code) showToast("Invalid Code.", "error");
-    });
-}
-function saveSettings() { localStorage.setItem('rbi_settings', JSON.stringify(settings)); }
-
-// --- GLOBAL PUROK LOGIC ---
-function updateGlobalPurokUI() {
-    document.getElementById('globalPurokDisplay').innerText = currentGlobalPurok;
-    localStorage.setItem('globalPurok', currentGlobalPurok);
-}
-
-function openPurokInputModal() {
-    const max = settings.purok_max || 10;
-    showCustomPrompt("SET ACTIVE PUROK", `Enter Purok Number (1-${max}):`, (input) => {
-        if(input && parseInt(input) >= 1 && parseInt(input) <= max && input !== currentGlobalPurok) {
-            showCustomConfirm("CHANGE PUROK?", `This affects NEW entries.\nCurrent: ${currentGlobalPurok} -> New: ${input}`, () => {
-                currentGlobalPurok = input;
-                updateGlobalPurokUI();
-                showToast("Active Purok Updated", "success");
-            });
+    alert("Please contact SEC JERICK for the Admin Password.");
+    const input = prompt("Enter Dynamic Admin Password:");
+    
+    if(input === getDynamicPassword()) {
+        const newPass = prompt("Admin Code Correct. Enter your NEW Password:");
+        if(newPass && newPass.trim().length > 0) { 
+            settings.custom_password = newPass.trim(); 
+            saveSettings(); 
+            alert("Password Reset Successfully."); 
         }
-    });
-}
-
-// --- CONFIG TAB ---
-function loadConfigUI() {
-    const pMax = settings.purok_max || 10;
-    document.getElementById('confPurok').value = pMax;
-    const sel = document.getElementById('addressSelect');
-    sel.innerHTML = '<option value="">SELECT ADDRESS...</option>';
-    (settings.addresses || []).forEach(addr => {
-        let opt = document.createElement('option'); opt.value = addr; opt.innerText = addr; sel.appendChild(opt);
-    });
-    const list = document.getElementById('listAddresses');
-    list.innerHTML = '';
-    (settings.addresses || []).forEach((addr, i) => {
-        list.innerHTML += `<div class="config-item"><span>${addr}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeAddress(${i})"></i></div>`;
-    });
-}
-function savePurokConf() {
-    const val = parseInt(document.getElementById('confPurok').value);
-    if(val > 0) { settings.purok_max = val; saveSettings(); showToast("Purok Limit Updated", "success"); }
-}
-function addAddress() {
-    const val = document.getElementById('newAddress').value.toUpperCase().trim();
-    if(val) {
-        if(!settings.addresses) settings.addresses = [];
-        settings.addresses.push(val);
-        saveSettings(); document.getElementById('newAddress').value = ""; loadConfigUI();
+    } else {
+        if(input) alert("Invalid Dynamic Code.");
     }
 }
-function removeAddress(i) {
-    showCustomConfirm("DELETE ADDRESS", "Remove this address from list?", () => {
-        settings.addresses.splice(i, 1); saveSettings(); loadConfigUI();
+
+function saveSettings() {
+    localStorage.setItem('rbi_settings', JSON.stringify(settings));
+}
+
+// --- CONFIGURATION LOGIC ---
+function loadConfigUI() {
+    // 1. Populate Purok Dropdown
+    const pSelect = document.getElementById('addressPurok');
+    const pMax = settings.purok_max || 10;
+    document.getElementById('lbl-max-purok').innerText = pMax;
+    document.getElementById('confPurok').value = pMax;
+    
+    pSelect.innerHTML = "";
+    for(let i=1; i<=pMax; i++){
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.innerText = i;
+        pSelect.appendChild(opt);
+    }
+
+    // 2. Populate Sitios
+    populateSelect('addressSitio', settings.sitios, "Select Sitio...");
+
+    // 3. Populate Streets
+    populateSelect('addressStreet', settings.streets, "Select Street (Optional)...");
+}
+
+function populateSelect(id, array, placeholder) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    if(array && array.length > 0){
+        array.forEach(item => {
+            let opt = document.createElement('option');
+            opt.value = item;
+            opt.innerText = item;
+            sel.appendChild(opt);
+        });
+    }
+}
+
+// Config Tab Functions
+function savePurokConf() {
+    const val = parseInt(document.getElementById('confPurok').value);
+    if(val > 0) {
+        settings.purok_max = val;
+        saveSettings();
+        loadConfigUI();
+        alert("Purok Limit Updated");
+    }
+}
+
+function addItem(key, inputId) {
+    const input = document.getElementById(inputId);
+    const val = input.value.trim().toUpperCase();
+    if(val) {
+        if(!settings[key]) settings[key] = [];
+        settings[key].push(val);
+        saveSettings();
+        input.value = "";
+        renderConfigLists();
+        loadConfigUI(); // Refresh main form dropdowns
+    }
+}
+
+function removeItem(key, index) {
+    if(confirm("Remove this item?")) {
+        settings[key].splice(index, 1);
+        saveSettings();
+        renderConfigLists();
+        loadConfigUI();
+    }
+}
+
+function renderConfigLists() {
+    // Render Sitios
+    const sDiv = document.getElementById('listSitios');
+    sDiv.innerHTML = '';
+    (settings.sitios || []).forEach((s, i) => {
+        sDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('sitios', ${i})"></i></div>`;
+    });
+
+    // Render Streets
+    const stDiv = document.getElementById('listStreets');
+    stDiv.innerHTML = '';
+    (settings.streets || []).forEach((s, i) => {
+        stDiv.innerHTML += `<div class="config-item"><span>${s}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem('streets', ${i})"></i></div>`;
     });
 }
 
-// --- TAB SWITCHING ---
-function switchTab(tab, dir = 0) {
-    currentTab = tab;
+// --- TAB FUNCTIONALITY ---
+function switchTab(tab) {
+    const regTab = document.getElementById('tab-registration');
+    const recTab = document.getElementById('tab-records');
+    const confTab = document.getElementById('tab-config');
+    
+    // Reset buttons
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    
-    // Animation Logic
-    const contents = document.querySelectorAll('.content-area');
-    contents.forEach(c => {
-        c.classList.remove('active', 'slide-in-left', 'slide-in-right');
-    });
 
-    const activeContent = document.getElementById(`tab-${tab === 'reg' ? 'registration' : (tab === 'rec' ? 'records' : (tab === 'hh' ? 'households' : 'config'))}`);
-    activeContent.classList.add('active');
-    
-    if(dir > 0) activeContent.classList.add('slide-in-right');
-    else if(dir < 0) activeContent.classList.add('slide-in-left');
+    // Hide all
+    regTab.style.display = 'none';
+    recTab.style.display = 'none';
+    confTab.style.display = 'none';
 
-    document.getElementById(`btn-${tab}`).classList.add('active');
-
-    if(tab === 'rec') renderList();
-    if(tab === 'hh') renderHouseholdList();
+    if(tab === 'reg') {
+        regTab.style.display = 'block';
+        document.getElementById('btn-reg').classList.add('active');
+    } else if(tab === 'rec') {
+        recTab.style.display = 'block';
+        document.getElementById('btn-rec').classList.add('active');
+        renderList();
+    } else if (tab === 'conf') {
+        confTab.style.display = 'block';
+        document.getElementById('btn-conf').classList.add('active');
+        renderConfigLists();
+    }
 }
 
+// --- RELIGION LOGIC ---
 function checkReligion() {
     const sel = document.getElementById('religionSelect');
-    document.getElementById('religionOther').style.display = (sel.value === 'OTHERS') ? 'block' : 'none';
+    const otherInp = document.getElementById('religionOther');
+    if(sel.value === 'OTHERS') {
+        otherInp.style.display = 'block';
+    } else {
+        otherInp.style.display = 'none';
+    }
 }
 
-// --- SAVE RECORD ---
+// --- CORE FUNCTIONS ---
 function saveRecord(){
-  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship', 'addressSelect'];
+  const idsToCheck = ['lastName', 'firstName', 'middleName', 'birthPlace', 'birthDate', 'citizenship', 'mFirst', 'mMiddle', 'mLast', 'addressSitio'];
+  
   for(let id of idsToCheck) {
-      if(!document.getElementById(id).value.trim()) { showToast("FIELD REQUIRED: " + id.toUpperCase(), "error"); return; }
+      if(!document.getElementById(id).value.trim()) {
+          let fieldName = id.replace(/([A-Z])/g, ' $1').trim();
+          if(id === 'mFirst') fieldName = "Mother's First Name";
+          if(id === 'mMiddle') fieldName = "Mother's Middle Name";
+          if(id === 'mLast') fieldName = "Mother's Last Name";
+          if(id === 'addressSitio') fieldName = "Sitio (Address)";
+          
+          alert("Field Required: " + fieldName);
+          return;
+      }
   }
+  
+  // Handle Religion
   let finalReligion = document.getElementById('religionSelect').value;
   if(finalReligion === 'OTHERS') {
       finalReligion = document.getElementById('religionOther').value.toUpperCase();
-      if(!finalReligion) { showToast("SPECIFY RELIGION", "error"); return; }
+      if(!finalReligion) { alert("Please specify the religion."); return; }
   }
-  let purokToSave = currentGlobalPurok;
-  if(editingIndex > -1) purokToSave = records[editingIndex][17]; 
 
   const newRow = [
-    document.getElementById('inhabitantType').value, document.getElementById('lastName').value.toUpperCase(),
-    document.getElementById('firstName').value.toUpperCase(), document.getElementById('middleName').value.toUpperCase(),
-    document.getElementById('suffix').value.toUpperCase(), document.getElementById('birthPlace').value.toUpperCase(),
-    document.getElementById('birthDate').value, document.getElementById('sex').value, document.getElementById('civilStatus').value,
-    document.getElementById('citizenship').value.toUpperCase(), document.getElementById('profession').value.toUpperCase(), 
-    document.getElementById('contact').value, "", document.getElementById('education').value,
-    document.getElementById('mFirst').value.toUpperCase(), document.getElementById('mMiddle').value.toUpperCase(),
-    document.getElementById('mLast').value.toUpperCase(), purokToSave, document.getElementById('addressSelect').value, 
-    finalReligion, document.getElementById('isOSY').checked ? "YES" : "NO", document.getElementById('isPWD').checked ? "YES" : "NO",
-    document.getElementById('is4Ps').checked ? "YES" : "NO", document.getElementById('isIPS').checked ? "YES" : "NO",
+    document.getElementById('inhabitantType').value,
+    document.getElementById('lastName').value.toUpperCase(),
+    document.getElementById('firstName').value.toUpperCase(),
+    document.getElementById('middleName').value.toUpperCase(),
+    document.getElementById('suffix').value.toUpperCase(), 
+    document.getElementById('birthPlace').value.toUpperCase(),
+    document.getElementById('birthDate').value,
+    document.getElementById('sex').value,
+    document.getElementById('civilStatus').value,
+    document.getElementById('citizenship').value.toUpperCase(),
+    document.getElementById('profession').value.toUpperCase(), 
+    document.getElementById('contact').value, 
+    document.getElementById('email').value,   
+    document.getElementById('education').value,
+    document.getElementById('mFirst').value.toUpperCase(),
+    document.getElementById('mMiddle').value.toUpperCase(),
+    document.getElementById('mLast').value.toUpperCase(),
+    // NEW FIELDS
+    document.getElementById('addressPurok').value,
+    document.getElementById('addressSitio').value,
+    document.getElementById('addressStreet').value,
+    finalReligion,
+    document.getElementById('isOSY').checked ? "YES" : "NO",
+    document.getElementById('isPWD').checked ? "YES" : "NO",
+    document.getElementById('is4Ps').checked ? "YES" : "NO",
+    document.getElementById('isIPS').checked ? "YES" : "NO",
     document.getElementById('isSolo').checked ? "YES" : "NO"
   ];
 
   if (editingIndex > -1) {
-      records[editingIndex] = newRow; showToast('Record Updated!', "success"); cancelEdit(); 
+      records[editingIndex] = newRow;
+      alert('Record Updated Successfully!');
+      cancelEdit(); 
   } else {
-      records.push(newRow); showToast('Saved to Purok ' + purokToSave, "success");
+      records.push(newRow);
+      alert('Record Saved!');
   }
-  localStorage.setItem('rbiRecords', JSON.stringify(records)); updateMotherDatalist();
 
+  localStorage.setItem('rbiRecords', JSON.stringify(records));
+  updateMotherDatalist();
+
+  // Clear fields logic
   if(editingIndex === -1) {
-      const currType = document.getElementById('inhabitantType').value;
-      const currRel = "ROMAN CATHOLIC"; 
-      document.querySelectorAll('input').forEach(i => { if(i.type === 'checkbox') i.checked = false; else i.value = ''; });
-      document.getElementById('inhabitantType').value = currType; document.getElementById('citizenship').value = "FILIPINO";
-      document.getElementById('religionSelect').value = currRel; document.getElementById('addressSelect').value = "";
-      checkReligion(); document.getElementById('lastName').focus();
+      const currentType = document.getElementById('inhabitantType').value;
+      
+      // Reset Inputs
+      document.querySelectorAll('input').forEach(input => {
+          if(input.type === 'checkbox') input.checked = false;
+          else input.value = '';
+      });
+      document.getElementById('citizenship').value = "FILIPINO"; 
+      document.getElementById('inhabitantType').value = currentType;
+      
+      // Reset Selects to default
+      document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
+      checkReligion(); // Hide other input
+      document.getElementById('addressSitio').value = "";
+      document.getElementById('addressStreet').value = "";
+      
+      document.getElementById('inhabitantType').focus();
   }
+  
+  renderList();
 }
 
-// --- EDITING ---
+// --- EDITING LOGIC ---
 function startEdit(index) {
     const r = records[index];
-    document.getElementById('inhabitantType').value = r[0]; document.getElementById('lastName').value = r[1];
-    document.getElementById('firstName').value = r[2]; document.getElementById('middleName').value = r[3];
-    document.getElementById('suffix').value = r[4]; document.getElementById('birthPlace').value = r[5];
-    document.getElementById('birthDate').value = r[6]; document.getElementById('sex').value = r[7];
-    document.getElementById('civilStatus').value = r[8]; document.getElementById('citizenship').value = r[9];
-    document.getElementById('profession').value = r[10]; document.getElementById('contact').value = r[11];
-    document.getElementById('education').value = r[13]; document.getElementById('mFirst').value = r[14];
-    document.getElementById('mMiddle').value = r[15]; document.getElementById('mLast').value = r[16];
-    document.getElementById('addressSelect').value = r[18];
+    
+    // 1. Basic Fields
+    document.getElementById('inhabitantType').value = r[0];
+    document.getElementById('lastName').value = r[1];
+    document.getElementById('firstName').value = r[2];
+    document.getElementById('middleName').value = r[3];
+    document.getElementById('suffix').value = r[4];
+    document.getElementById('birthPlace').value = r[5];
+    document.getElementById('birthDate').value = r[6];
+    document.getElementById('sex').value = r[7];
+    document.getElementById('civilStatus').value = r[8];
+    document.getElementById('citizenship').value = r[9];
+    document.getElementById('profession').value = r[10];
+    document.getElementById('contact').value = r[11];
+    document.getElementById('email').value = r[12];
+    document.getElementById('education').value = r[13];
+    document.getElementById('mFirst').value = r[14];
+    document.getElementById('mMiddle').value = r[15];
+    document.getElementById('mLast').value = r[16];
 
-    const relVal = r[19] || "ROMAN CATHOLIC";
+    // 2. Address Fields
+    document.getElementById('addressPurok').value = r[17] || 1;
+    document.getElementById('addressSitio').value = r[18] || "";
+    document.getElementById('addressStreet').value = r[19] || "";
+
+    // 3. Religion Field
+    const relVal = r[20] || "ROMAN CATHOLIC";
     const relSelect = document.getElementById('religionSelect');
+    // Check if value exists in standard options
     let exists = false;
-    for(let i=0; i<relSelect.options.length; i++) if(relSelect.options[i].value === relVal) exists = true;
-    if(exists) { relSelect.value = relVal; document.getElementById('religionOther').style.display = 'none'; } 
-    else { relSelect.value = 'OTHERS'; document.getElementById('religionOther').style.display = 'block'; document.getElementById('religionOther').value = relVal; }
+    for(let i=0; i<relSelect.options.length; i++){
+        if(relSelect.options[i].value === relVal) exists = true;
+    }
+    
+    if(exists) {
+        relSelect.value = relVal;
+        document.getElementById('religionOther').style.display = 'none';
+    } else {
+        relSelect.value = 'OTHERS';
+        document.getElementById('religionOther').style.display = 'block';
+        document.getElementById('religionOther').value = relVal;
+    }
 
-    document.getElementById('isOSY').checked = (r[20] === "YES"); document.getElementById('isPWD').checked = (r[21] === "YES");
-    document.getElementById('is4Ps').checked = (r[22] === "YES"); document.getElementById('isIPS').checked = (r[23] === "YES");
-    document.getElementById('isSolo').checked = (r[24] === "YES");
+    // 4. Toggles
+    document.getElementById('isOSY').checked = (r[21] === "YES");
+    document.getElementById('isPWD').checked = (r[22] === "YES");
+    document.getElementById('is4Ps').checked = (r[23] === "YES");
+    document.getElementById('isIPS').checked = (r[24] === "YES");
+    document.getElementById('isSolo').checked = (r[25] === "YES");
 
     editingIndex = index;
-    document.getElementById('btn-save').innerHTML = '<i class="fas fa-check"></i> UPDATE RECORD';
-    document.getElementById('btn-cancel').style.display = "flex";
-    document.getElementById('edit-banner').style.display = "block";
-    document.getElementById('edit-purok-indicator').innerText = r[17];
-    closeViewer(); switchTab('reg');
+    
+    document.getElementById('btn-save').innerText = "UPDATE RECORD";
+    document.getElementById('btn-cancel').style.display = "block";
+    
+    closeViewer();
+    switchTab('reg');
+    window.scrollTo(0,0);
 }
 
 function cancelEdit() {
     editingIndex = -1;
-    document.getElementById('btn-save').innerHTML = '<i class="fas fa-save"></i> SAVE RECORD';
-    document.getElementById('btn-cancel').style.display = "none"; document.getElementById('edit-banner').style.display = "none";
-    document.querySelectorAll('input').forEach(i => { if(i.type === 'checkbox') i.checked = false; else i.value = ''; });
-    document.getElementById('addressSelect').value = ""; document.getElementById('citizenship').value = "FILIPINO";
-    document.getElementById('religionSelect').value = "ROMAN CATHOLIC"; checkReligion();
+    document.getElementById('btn-save').innerText = "SAVE RECORD";
+    document.getElementById('btn-cancel').style.display = "none";
+    
+    // Clear inputs
+    const inputs = document.querySelectorAll('input');
+    inputs.forEach(input => {
+        if(input.type === 'checkbox') input.checked = false;
+        else input.value = '';
+    });
+    
+    document.getElementById('citizenship').value = "FILIPINO";
+    document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
+    checkReligion();
+    document.getElementById('addressSitio').value = "";
+    document.getElementById('addressStreet').value = "";
 }
 
-// --- RECORDS SEARCH & PAGINATION ---
 function renderList(){
-  const q = document.getElementById('searchBox').value.toLowerCase();
-  const list = document.getElementById('resultList'); list.innerHTML = '';
+  const q = searchBox.value.toLowerCase();
+  resultList.innerHTML = '';
   
-  let filtered = records.map((r, i) => ({data: r, index: i})).filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
-
-  // Pagination Logic
-  const itemsPerPage = 7;
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-  if(recPage > totalPages) recPage = totalPages; if(recPage < 1) recPage = 1;
-
-  document.getElementById('rec-page-indicator').innerText = `Page ${recPage} of ${totalPages}`;
-  document.getElementById('btn-prev-rec').className = `page-btn ${recPage===1?'disabled':''}`;
-  document.getElementById('btn-next-rec').className = `page-btn ${recPage===totalPages?'disabled':''}`;
-
-  const pageItems = filtered.slice((recPage - 1) * itemsPerPage, (recPage - 1) * itemsPerPage + itemsPerPage);
-
-  if(pageItems.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">NO RECORDS FOUND</div>'; return; }
+  const filtered = records.map((r, i) => ({data: r, index: i}))
+                          .filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
   
-  pageItems.forEach((item) => {
-    const r = item.data; 
-    const div = document.createElement('div'); div.className = 'record-card';
+  if(filtered.length === 0 && q.length > 0) {
+      resultList.innerHTML = '<div style="text-align:center; padding:10px; color:#999;">No records found</div>';
+      return;
+  }
+
+  filtered.forEach((item) => {
+    const r = item.data;
+    const div = document.createElement('div');
+    div.className = 'card';
     div.onclick = () => viewRecord(item.index); 
-    
-    let genderIcon = r[7] === 'MALE' ? '<i class="fas fa-mars" style="color:var(--male);"></i>' : '<i class="fas fa-venus" style="color:var(--female);"></i>';
-    
     div.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-            ${genderIcon}
-            <div><h5>${r[1]}, ${r[2]} ${r[4]}</h5><p>PUROK ${r[17]}</p></div>
-        </div>
-        <i class="fas fa-chevron-right" style="color:var(--accent); font-size:12px;"></i>
+        <span>${r[1]}, ${r[2]} <small>(Purok ${r[17] || '?'})</small></span>
+        <small style="color:#0a3d62">View <i class="fas fa-chevron-right"></i></small>
     `;
-    list.appendChild(div);
+    resultList.appendChild(div);
   });
 }
-function changeRecPage(dir) { recPage += dir; renderList(); }
 
-function viewRecord(index) {
-    const r = records[index];
-    const html = HEADERS.map((h, i) => `<div style="border-bottom:1px solid #eee; padding:8px 0;"><span style="font-size:10px; color:#94a3b8; display:block;">${h}</span><span style="font-size:14px; font-weight:600; color:#334155;">${r[i] || '-'}</span></div>`).join('');
-    document.getElementById('viewer-content').innerHTML = html;
-    document.getElementById('viewer-actions').innerHTML = `<button class="btn btn-warning" onclick="startEdit(${index})" style="background:#f59e0b; color:white;">EDIT RECORD</button><button class="btn btn-ghost" onclick="closeViewer()">CLOSE</button>`;
-    document.getElementById('viewer-overlay').style.display = 'flex';
-}
-function closeViewer() { document.getElementById('viewer-overlay').style.display = 'none'; }
-
-// --- HOUSEHOLD LOGIC (WITH ROLES & FILTERING) ---
-function openHHModal(index = -1) {
-    document.getElementById('hh-modal').style.display = 'flex';
-    document.getElementById('hh-pred-list').style.display = 'none';
-    document.getElementById('hh-member-search').value = '';
+// --- NEW FEATURE: AUTO FILL FROM RECORDED MOTHERS ---
+function updateMotherDatalist() {
+    const dl = document.getElementById('motherList');
+    dl.innerHTML = '';
     
-    if(index > -1) { // Edit Mode
-        currentEditingHH = households[index];
-        tempHHMembers = currentEditingHH.members.map(m => {
-            if(typeof m === 'object') return m; 
-            return { index: m, role: "MEMBER" }; 
-        });
-        document.getElementById('hh-id-input').value = currentEditingHH.id;
-    } else { // New Mode
-        currentEditingHH = null; tempHHMembers = []; document.getElementById('hh-id-input').value = "";
-    }
-    renderHHMembersPreview();
-}
-function closeHHModal() { document.getElementById('hh-modal').style.display = 'none'; }
-
-function searchMemberForHH() {
-    const val = document.getElementById('hh-member-search').value.toLowerCase();
-    const list = document.getElementById('hh-pred-list'); list.innerHTML = '';
-    if(val.length < 2) { list.style.display = 'none'; return; }
-
-    // Collect all indices of members already in OTHER households
-    const occupiedIndices = new Set();
-    households.forEach(hh => {
-        // If we are editing, don't count the current household's members as "occupied" (so we can add them back if we deleted them from the active list, but we handle that via tempHHMembers check)
-        // Strictly speaking: exclude anyone who is in a household, unless that household is the one we are editing.
-        if(currentEditingHH && hh === currentEditingHH) return;
-        
-        hh.members.forEach(m => {
-             let idx = (typeof m === 'object') ? m.index : m;
-             occupiedIndices.add(idx);
-        });
-    });
-
-    const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i}))
-                         .filter(m => m.name.toLowerCase().includes(val));
+    const uniqueMothers = new Set();
     
-    // Filter matches
-    const finalMatches = matches.filter(m => !occupiedIndices.has(m.index));
-
-    if(finalMatches.length > 0) {
-        list.style.display = 'block';
-        finalMatches.slice(0, 5).forEach(m => {
-            const li = document.createElement('li'); li.className = 'pred-item'; li.innerText = m.name;
-            li.onclick = () => addMemberToHH(m.index); list.appendChild(li);
-        });
-    } else list.style.display = 'none';
-}
-
-function addMemberToHH(recordIndex) {
-    if(!tempHHMembers.some(m => m.index === recordIndex)) {
-        tempHHMembers.push({ index: recordIndex, role: "MEMBER" }); // Default role
-        renderHHMembersPreview();
-        document.getElementById('hh-member-search').value = ''; document.getElementById('hh-pred-list').style.display = 'none';
-    } else showToast("Person already in this list.", "error");
-}
-
-function updateMemberRole(tempIndex, newRole) {
-    tempHHMembers[tempIndex].role = newRole;
-}
-
-function removeMemberFromHH(tempIndex) {
-    tempHHMembers.splice(tempIndex, 1); renderHHMembersPreview();
-}
-
-function renderHHMembersPreview() {
-    const div = document.getElementById('hh-members-display'); div.innerHTML = '';
-    if(tempHHMembers.length === 0) { div.innerHTML = '<small>No members added.</small>'; return; }
-    
-    tempHHMembers.forEach((mObj, i) => {
-        const r = records[mObj.index];
-        if(r) {
-            const roles = ["MEMBER", "HEAD OF HOUSEHOLD", "SPOUSE", "SON", "DAUGHTER", "OTHERS"];
-            let roleOptions = roles.map(role => `<option value="${role}" ${mObj.role===role?'selected':''}>${role}</option>`).join('');
+    records.forEach(r => {
+        if(r[16] && r[14]) {
+            const motherKey = `${r[16]}, ${r[14]}`;
             
-            div.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:5px;">
-                <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13px;">${r[1]}, ${r[2]}</div>
-                    <select onchange="updateMemberRole(${i}, this.value)" style="padding:4px; font-size:11px; margin-top:2px; width:90%;">${roleOptions}</select>
-                </div>
-                <i class="fas fa-times" style="color:red; cursor:pointer; padding:5px;" onclick="removeMemberFromHH(${i})"></i>
-            </div>`;
+            if(!uniqueMothers.has(motherKey)){
+                uniqueMothers.add(motherKey);
+                const option = document.createElement('option');
+                option.value = `${r[16]}, ${r[14]} ${r[15] || ''}`.trim(); 
+                dl.appendChild(option);
+            }
         }
     });
 }
 
-function saveHousehold() {
-    const hhID = document.getElementById('hh-id-input').value.trim();
-    if(!hhID) { showToast("Household Number required", "error"); return; }
-    if(tempHHMembers.length === 0) { showToast("Add at least one member", "error"); return; }
-
-    if(currentEditingHH) { currentEditingHH.id = hhID; currentEditingHH.members = tempHHMembers; showToast("Household Updated", "success"); } 
-    else { households.push({ id: hhID, members: tempHHMembers }); showToast("Household Created", "success"); }
-    
-    localStorage.setItem('rbiHouseholds', JSON.stringify(households)); closeHHModal(); renderHouseholdList();
-}
-
-function renderHouseholdList() {
-    const container = document.getElementById('hh-list-container');
-    const search = document.getElementById('searchHH').value.toLowerCase();
-    container.innerHTML = '';
-    
-    let filtered = households.filter(hh => {
-        if(hh.id.toLowerCase().includes(search)) return true;
-        return hh.members.some(m => {
-            let idx = (typeof m === 'object') ? m.index : m;
-            const r = records[idx];
-            return r && (r[1].toLowerCase().includes(search) || r[2].toLowerCase().includes(search));
-        });
-    });
-
-    const itemsPerPage = 5; const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-    if(hhPage > totalPages) hhPage = totalPages; if(hhPage < 1) hhPage = 1;
-    
-    document.getElementById('hh-page-indicator').innerText = `Page ${hhPage} of ${totalPages}`;
-    document.getElementById('btn-prev-hh').className = `page-btn ${hhPage===1?'disabled':''}`;
-    document.getElementById('btn-next-hh').className = `page-btn ${hhPage===totalPages?'disabled':''}`;
-
-    const pageItems = filtered.slice((hhPage - 1) * itemsPerPage, (hhPage - 1) * itemsPerPage + itemsPerPage);
-    if(pageItems.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">No Households Found</div>'; return; }
-
-    pageItems.forEach(hh => {
-        const realIndex = households.indexOf(hh);
-        let heads = hh.members.filter(m => (typeof m === 'object' && m.role === 'HEAD OF HOUSEHOLD'));
-        if(heads.length === 0 && hh.members.length > 0) heads = [hh.members[0]]; 
-        
-        let headNames = heads.map(h => {
-             let idx = (typeof h === 'object') ? h.index : h;
-             return records[idx] ? `${records[idx][1]}, ${records[idx][2]}` : "Unknown";
-        }).join(" & ");
-
-        const div = document.createElement('div'); div.className = 'record-card';
-        div.onclick = () => openHHModal(realIndex);
-        div.innerHTML = `<div><h5 style="color:var(--accent);">HH: ${hh.id}</h5><p><b>Head:</b> ${headNames}</p><p style="font-size:11px;">Members: ${hh.members.length}</p></div><i class="fas fa-pencil-alt" style="color:var(--text-light);"></i>`;
-        container.appendChild(div);
-    });
-}
-function changeHHPage(dir) { hhPage += dir; renderHouseholdList(); }
-
-// --- UTILS & EXPORT ---
-function updateMotherDatalist() {
-    const dl = document.getElementById('motherList'); dl.innerHTML = ''; const uniqueMothers = new Set();
-    records.forEach(r => { if(r[16] && r[14]) { const k = `${r[16]}, ${r[14]}`; if(!uniqueMothers.has(k)){ uniqueMothers.add(k); const o = document.createElement('option'); o.value = `${r[16]}, ${r[14]} ${r[15] || ''}`.trim(); dl.appendChild(o); }}});
-}
 function autoFillMother(inputObj) {
-    const val = inputObj.value; const found = records.find(r => `${r[16]}, ${r[14]} ${r[15] || ''}`.trim() === val);
-    if(found) { document.getElementById('mLast').value = found[16]; document.getElementById('mFirst').value = found[14]; document.getElementById('mMiddle').value = found[15]; }
+    const val = inputObj.value;
+    if(!val) return;
+
+    const found = records.find(r => {
+        const mStr = `${r[16]}, ${r[14]} ${r[15] || ''}`.trim();
+        return mStr === val;
+    });
+    
+    if(found) {
+        document.getElementById('mLast').value = found[16];   // Mother's Last
+        document.getElementById('mFirst').value = found[14];  // Mother's First
+        document.getElementById('mMiddle').value = found[15]; // Mother's Middle
+    }
 }
 
-async function prepareExcelExport(){
-  if(records.length === 0){ showToast("No records to export.", "error"); return; }
+// --- VIEWER FUNCTIONALITY ---
+function viewRecord(index) {
+    const r = records[index];
+    const html = HEADERS.map((h, i) => `
+        <div class="detail-row">
+            <span class="detail-label">${h}</span>
+            <span class="detail-val">${r[i] || '-'}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('viewer-content').innerHTML = html;
+    
+    // Inject Buttons (Edit & Close)
+    document.getElementById('viewer-actions').innerHTML = `
+        <button class="edit-btn" onclick="startEdit(${index})">EDIT RECORD</button>
+        <button class="close-btn" onclick="closeViewer()">Close Viewer</button>
+    `;
+    
+    document.getElementById('viewer-overlay').style.display = 'flex';
+}
+
+function closeViewer() {
+    document.getElementById('viewer-overlay').style.display = 'none';
+}
+
+function exportExcel(){
+  if(records.length === 0){ alert("No records to export."); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // SHEET 1: INSTRUCTIONS
+  const instructionData = [
+      ["INSTRUCTIONS"],
+      ["This file was generated by SEC JERICK RBI System."],
+      ["Please go to the 'DATA' sheet (Sheet 2) to view the records."],
+      ["Columns P onwards contain Sectoral and Address data."]
+  ];
+  const wsInstructions = XLSX.utils.aoa_to_sheet(instructionData);
+  XLSX.utils.book_append_sheet(wb, wsInstructions, "INSTRUCTIONS");
+
+  // SHEET 2: DATA
+  const allData = [HEADERS, ...records];
+  const wsData = XLSX.utils.aoa_to_sheet(allData);
   
-  showLoading(true, "GENERATING EXCEL", "Opening Share Options...");
-  
-  setTimeout(async () => {
-      try {
-          const wb = XLSX.utils.book_new();
-          const instructionData = [["INSTRUCTIONS"], ["Generated by SEC JERICK RBI System"], ["See 'DATA' sheet."]];
-          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
-          const allData = [HEADERS, ...records];
-          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+  const wscols = HEADERS.map(h => ({wch: h.length + 5}));
+  wsData['!cols'] = wscols;
 
-          const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-          const blob = new Blob([wbout], {type:"application/octet-stream"});
-          const filename = `RBI_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
-          const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  XLSX.utils.book_append_sheet(wb, wsData, "DATA");
 
-          showLoading(false);
-
-          // AUTO TRIGGER SHARE
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              try {
-                  await navigator.share({
-                      files: [file],
-                      title: 'RBI Export',
-                      text: 'RBI Data Export File'
-                  });
-              } catch (err) {
-                  // User cancelled or share failed, fallback silently or just stop
-                  console.log('Share action ended', err);
-              }
-          } else {
-              // Fallback to download if sharing isn't supported on device
-              downloadBlob(blob, filename);
-              showToast("Sharing not supported. File Downloaded.", "info");
-          }
-      } catch (e) {
-          showLoading(false);
-          showToast("Export Failed: " + e.message, "error");
-      }
-  }, 800);
+  const dateStr = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `RBI_Export_${dateStr}.xlsx`);
 }
 
-function downloadBlob(blob, filename) {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-}
+renderList();
 </script>
 </body>
 </html>
