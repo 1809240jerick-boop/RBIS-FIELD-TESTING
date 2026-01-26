@@ -72,11 +72,11 @@
         /* --- LAYOUT & TABS --- */
         .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 60px; }
 
-        .tab-nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 60px; z-index: 800; }
+        .tab-nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 60px; z-index: 800; overflow-x: auto; }
         .tab-btn {
             flex: 1; border: none; background: none; padding: 15px;
-            font-size: 13px; font-weight: 600; color: var(--text-light);
-            cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s;
+            font-size: 12px; font-weight: 600; color: var(--text-light);
+            cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; white-space: nowrap;
         }
         .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
         .tab-btn i { margin-right: 5px; }
@@ -126,6 +126,7 @@
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-ghost { background: #e2e8f0; color: var(--text-main); }
+        .btn-small { width: auto; padding: 8px 16px; font-size: 12px; }
 
         /* SECTOR GRID */
         .sector-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
@@ -143,10 +144,11 @@
             z-index: 2000; display: none; align-items: center; justify-content: center;
         }
         .modal-box {
-            background: white; width: 85%; max-width: 320px;
+            background: white; width: 85%; max-width: 350px;
             border-radius: 16px; padding: 24px; text-align: center;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 90vh; overflow-y: auto;
         }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
@@ -158,6 +160,25 @@
         }
         .record-card h5 { margin: 0; font-size: 15px; color: var(--primary); }
         .record-card p { margin: 2px 0 0; font-size: 12px; color: var(--text-light); }
+
+        /* PREDICTIVE LIST */
+        .pred-list {
+            list-style: none; padding: 0; margin: 0; border: 1px solid #cbd5e1;
+            border-top: none; max-height: 150px; overflow-y: auto;
+            background: white; border-radius: 0 0 8px 8px;
+            display: none; text-align: left;
+        }
+        .pred-item {
+            padding: 10px; font-size: 13px; border-bottom: 1px solid #f1f5f9; cursor: pointer;
+        }
+        .pred-item:hover { background: #f8fafc; }
+
+        /* PAGINATION */
+        .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
+        .page-btn { padding: 8px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; }
+        .page-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .config-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
 
         .hidden { display: none; }
     </style>
@@ -190,6 +211,35 @@
     </div>
 </div>
 
+<div id="hh-modal" class="modal-overlay">
+    <div class="modal-box" style="width: 95%; max-width: 400px;">
+        <h4 style="margin-top:0; color:var(--primary);">MANAGE HOUSEHOLD</h4>
+        
+        <div class="form-group" style="text-align:left;">
+            <label>Household Number / ID</label>
+            <input id="hh-id-input" placeholder="e.g., 2024-001">
+        </div>
+
+        <div style="text-align:left; margin-bottom:15px;">
+            <label>Add Members (Search)</label>
+            <input id="hh-member-search" oninput="searchMemberForHH()" placeholder="Type Name...">
+            <ul id="hh-pred-list" class="pred-list"></ul>
+        </div>
+
+        <div style="text-align:left;">
+            <label>Current Members:</label>
+            <div id="hh-members-display" style="border:1px solid #eee; padding:10px; border-radius:8px; max-height:150px; overflow-y:auto; background:#f8fafc;">
+                <small>No members added.</small>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button class="btn btn-ghost" onclick="closeHHModal()">CLOSE</button>
+            <button class="btn btn-primary" onclick="saveHousehold()">SAVE HOUSEHOLD</button>
+        </div>
+    </div>
+</div>
+
 <div class="app-container">
 
     <div class="context-bar">
@@ -207,7 +257,8 @@
     <div class="tab-nav">
         <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg"><i class="fas fa-user-plus"></i> FORM</button>
         <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec"><i class="fas fa-list"></i> RECORDS</button>
-        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> SETTINGS</button>
+        <button class="tab-btn" onclick="switchTab('hh')" id="btn-hh"><i class="fas fa-home"></i> HOUSEHOLDS</button>
+        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> CONFIG</button>
     </div>
 
     <div id="tab-registration" class="content-area">
@@ -221,11 +272,7 @@
             
             <div class="form-group">
                 <label>Inhabitant Type<span class="req">*</span></label>
-                <select id="inhabitantType">
-                    <option>NON-MIGRANT</option>
-                    <option>MIGRANT</option>
-                    <option>TRANSIENT</option>
-                </select>
+                <select id="inhabitantType"><option>NON-MIGRANT</option><option>MIGRANT</option><option>TRANSIENT</option></select>
             </div>
 
             <div class="form-group"><label>Last Name<span class="req">*</span></label><input id="lastName" placeholder="DELA CRUZ"></div>
@@ -239,13 +286,9 @@
             </div>
 
             <div class="form-group"><label>Birth Place<span class="req">*</span></label><input id="birthPlace"></div>
-            
             <div class="form-group"><label>Civil Status<span class="req">*</span></label>
-                <select id="civilStatus">
-                    <option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option>
-                </select>
+                <select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select>
             </div>
-            
             <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
 
             <div class="form-group">
@@ -271,8 +314,11 @@
             <h5 class="section-title">2. ADDRESS & EDUCATION</h5>
             
             <div class="form-group">
-                <label>Additional Address Details / Landmark</label>
-                <input id="addressDetails" placeholder="HOUSE NO., STREET NAME, OR LANDMARK">
+                <label>Additional Address / Landmark<span class="req">*</span></label>
+                <select id="addressSelect">
+                    <option value="">SELECT ADDRESS...</option>
+                </select>
+                <small style="color:var(--accent); cursor:pointer;" onclick="switchTab('conf')"> + Manage Addresses in Config</small>
             </div>
 
             <div class="form-group"><label>Educational Attainment</label>
@@ -307,12 +353,10 @@
 
         <div class="card-section" style="background:#f8fafc; border:1px dashed #cbd5e1;">
             <h5 class="section-title" style="border-left-color:var(--primary);">4. MOTHER'S MAIDEN NAME</h5>
-            
             <div class="form-group">
                <input id="motherSearch" list="motherList" onchange="autoFillMother(this)" placeholder="SEARCH EXISTING MOTHERS..." style="border-color:var(--accent);">
                <datalist id="motherList"></datalist>
             </div>
-
             <div class="form-group"><input id="mFirst" placeholder="MOTHER'S FIRST NAME"></div>
             <div class="form-group"><input id="mMiddle" placeholder="MOTHER'S MIDDLE NAME"></div>
             <div class="form-group"><input id="mLast" placeholder="MOTHER'S LAST NAME"></div>
@@ -331,8 +375,22 @@
         <div id="resultList" style="margin-top:15px;"></div>
         
         <div class="card-section" style="margin-top:20px; text-align:center;">
-            <p style="font-size:12px; margin-bottom:10px;">Export data compatible with BIMS</p>
             <button class="btn btn-success" onclick="exportExcel()"><i class="fas fa-file-excel"></i> EXPORT TO EXCEL</button>
+        </div>
+    </div>
+
+    <div id="tab-households" class="content-area hidden">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <input id="searchHH" oninput="renderHouseholdList()" placeholder="Search Household or Member..." style="flex:1;">
+            <button class="btn btn-primary" style="width:auto;" onclick="openHHModal()"><i class="fas fa-plus"></i></button>
+        </div>
+        
+        <div id="hh-list-container"></div>
+        
+        <div class="pagination">
+            <button id="btn-prev-hh" class="page-btn" onclick="changeHHPage(-1)">Prev</button>
+            <span id="hh-page-indicator" style="align-self:center; font-size:12px;">Page 1</span>
+            <button id="btn-next-hh" class="page-btn" onclick="changeHHPage(1)">Next</button>
         </div>
     </div>
 
@@ -346,7 +404,15 @@
                     <input type="number" id="confPurok" placeholder="Default: 10">
                     <button class="btn btn-primary" style="width:auto;" onclick="savePurokConf()">UPDATE</button>
                 </div>
-                <small>Current Max: <span id="lbl-max-purok"></span></small>
+            </div>
+
+            <div class="form-group" style="margin-top:20px;">
+                <label>Manage Additional Addresses</label>
+                <div style="display:flex; gap:5px;">
+                    <input id="newAddress" placeholder="e.g. UPPER BASAK">
+                    <button class="btn btn-small btn-success" onclick="addAddress()">ADD</button>
+                </div>
+                <div class="list" id="listAddresses" style="max-height:150px; margin-top:10px;"></div>
             </div>
             
             <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
@@ -380,19 +446,24 @@ const HEADERS = [
     "PROFESSION/ OCCUPATION", "CONTACT NUMBER", "EMAIL ADDRESS", 
     "HIGHEST EDUCATIONAL ATTAINMENT", "MOTHER'S FIRST NAME", 
     "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME",
-    "PUROK", "ADDITIONAL ADDRESS", "RELIGION", // MODIFIED
+    "PUROK", "ADDITIONAL ADDRESS", "RELIGION", 
     "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
 ];
 
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
+let households = JSON.parse(localStorage.getItem('rbiHouseholds')) || [];
 let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
     custom_password: '', 
-    purok_max: 10
+    purok_max: 10,
+    addresses: []
 };
 
 // Global State
 let currentGlobalPurok = localStorage.getItem('globalPurok') || "1";
 let editingIndex = -1; 
+let hhPage = 1;
+let currentEditingHH = null; // Object for HH edit
+let tempHHMembers = []; // Indices of members in current HH edit session
 
 // --- SECURITY LOGIC ---
 function getDynamicPassword() {
@@ -449,15 +520,8 @@ function updateGlobalPurokUI() {
 }
 
 function openPurokSelector() {
-    // Generate options based on max purok
     const max = settings.purok_max || 10;
-    let opts = "";
-    for(let i=1; i<=max; i++) opts += i + ",";
-    
-    // Simple prompt is not enough, we need the modal logic.
-    // Let's use a temporary prompt to get the intended number, then show the warning modal.
     const input = prompt(`Enter Purok Number (1-${max}):`, currentGlobalPurok);
-    
     if(input && parseInt(input) >= 1 && parseInt(input) <= max && input !== currentGlobalPurok) {
         document.getElementById('tempPurokTarget').value = input;
         document.getElementById('warn-curr').innerText = currentGlobalPurok;
@@ -472,24 +536,52 @@ function confirmPurokChange() {
     document.getElementById('purok-warning-modal').style.display = 'none';
 }
 
-function cancelPurokChange() {
-    document.getElementById('purok-warning-modal').style.display = 'none';
-}
+function cancelPurokChange() { document.getElementById('purok-warning-modal').style.display = 'none'; }
 
 // --- CONFIG TAB ---
 function loadConfigUI() {
     const pMax = settings.purok_max || 10;
-    document.getElementById('lbl-max-purok').innerText = pMax;
     document.getElementById('confPurok').value = pMax;
+    
+    // Populate Address Dropdown in Form
+    const sel = document.getElementById('addressSelect');
+    sel.innerHTML = '<option value="">SELECT ADDRESS...</option>';
+    (settings.addresses || []).forEach(addr => {
+        let opt = document.createElement('option');
+        opt.value = addr;
+        opt.innerText = addr;
+        sel.appendChild(opt);
+    });
+
+    // Populate Address List in Config
+    const list = document.getElementById('listAddresses');
+    list.innerHTML = '';
+    (settings.addresses || []).forEach((addr, i) => {
+        list.innerHTML += `<div class="config-item"><span>${addr}</span> <i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeAddress(${i})"></i></div>`;
+    });
 }
 
 function savePurokConf() {
     const val = parseInt(document.getElementById('confPurok').value);
-    if(val > 0) {
-        settings.purok_max = val;
+    if(val > 0) { settings.purok_max = val; saveSettings(); alert("Purok Limit Updated"); }
+}
+
+function addAddress() {
+    const val = document.getElementById('newAddress').value.toUpperCase().trim();
+    if(val) {
+        if(!settings.addresses) settings.addresses = [];
+        settings.addresses.push(val);
+        saveSettings();
+        document.getElementById('newAddress').value = "";
+        loadConfigUI();
+    }
+}
+
+function removeAddress(i) {
+    if(confirm("Remove this address option?")) {
+        settings.addresses.splice(i, 1);
         saveSettings();
         loadConfigUI();
-        alert("Purok Limit Updated");
     }
 }
 
@@ -505,6 +597,10 @@ function switchTab(tab) {
         document.getElementById('tab-records').classList.remove('hidden');
         document.getElementById('btn-rec').classList.add('active');
         renderList();
+    } else if (tab === 'hh') {
+        document.getElementById('tab-households').classList.remove('hidden');
+        document.getElementById('btn-hh').classList.add('active');
+        renderHouseholdList();
     } else if (tab === 'conf') {
         document.getElementById('tab-config').classList.remove('hidden');
         document.getElementById('btn-conf').classList.add('active');
@@ -520,8 +616,7 @@ function checkReligion() {
 
 // --- SAVE RECORD ---
 function saveRecord(){
-  // Modified Validation: Removed Middle, Mother, Education
-  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship'];
+  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship', 'addressSelect'];
   
   for(let id of idsToCheck) {
       if(!document.getElementById(id).value.trim()) {
@@ -530,22 +625,14 @@ function saveRecord(){
       }
   }
   
-  // Handle Religion
   let finalReligion = document.getElementById('religionSelect').value;
   if(finalReligion === 'OTHERS') {
       finalReligion = document.getElementById('religionOther').value.toUpperCase();
       if(!finalReligion) { alert("PLEASE SPECIFY RELIGION"); return; }
   }
 
-  // Determine Purok: If Editing, keep original. If New, use Global.
   let purokToSave = currentGlobalPurok;
-  if(editingIndex > -1) {
-      // If editing, we preserve the one loaded into memory/UI indicator? 
-      // Actually, let's keep the one currently in the record unless we want to allow moving.
-      // For simplicity in this logic, we keep the original record's Purok (displayed in banner)
-      // We read from the temporary banner or just the original record array.
-      purokToSave = records[editingIndex][17]; 
-  }
+  if(editingIndex > -1) purokToSave = records[editingIndex][17]; 
 
   const newRow = [
     document.getElementById('inhabitantType').value,
@@ -560,16 +647,14 @@ function saveRecord(){
     document.getElementById('citizenship').value.toUpperCase(),
     document.getElementById('profession').value.toUpperCase(), 
     document.getElementById('contact').value, 
-    "", // Email removed from UI to clean up, placeholder kept in array structure if needed
+    "", 
     document.getElementById('education').value,
     document.getElementById('mFirst').value.toUpperCase(),
     document.getElementById('mMiddle').value.toUpperCase(),
     document.getElementById('mLast').value.toUpperCase(),
-    // ADDRESS
-    purokToSave, // Index 17
-    document.getElementById('addressDetails').value.toUpperCase(), // Index 18 (Was Sitio)
-    finalReligion, // Index 19 (Was Street)
-    // SECTORS
+    purokToSave, 
+    document.getElementById('addressSelect').value, 
+    finalReligion, 
     document.getElementById('isOSY').checked ? "YES" : "NO",
     document.getElementById('isPWD').checked ? "YES" : "NO",
     document.getElementById('is4Ps').checked ? "YES" : "NO",
@@ -590,18 +675,16 @@ function saveRecord(){
   updateMotherDatalist();
 
   if(editingIndex === -1) {
-      // Reset Form for new entry
       const currType = document.getElementById('inhabitantType').value;
-      const currRel = "ROMAN CATHOLIC"; // Default
-      
+      const currRel = "ROMAN CATHOLIC"; 
       document.querySelectorAll('input').forEach(i => {
           if(i.type === 'checkbox') i.checked = false;
           else i.value = '';
       });
-      
       document.getElementById('inhabitantType').value = currType;
       document.getElementById('citizenship').value = "FILIPINO";
       document.getElementById('religionSelect').value = currRel;
+      document.getElementById('addressSelect').value = "";
       checkReligion();
       document.getElementById('lastName').focus();
   }
@@ -610,7 +693,6 @@ function saveRecord(){
 // --- EDITING ---
 function startEdit(index) {
     const r = records[index];
-    
     document.getElementById('inhabitantType').value = r[0];
     document.getElementById('lastName').value = r[1];
     document.getElementById('firstName').value = r[2];
@@ -623,22 +705,19 @@ function startEdit(index) {
     document.getElementById('citizenship').value = r[9];
     document.getElementById('profession').value = r[10];
     document.getElementById('contact').value = r[11];
-    // Skip Email [12]
     document.getElementById('education').value = r[13];
     document.getElementById('mFirst').value = r[14];
     document.getElementById('mMiddle').value = r[15];
     document.getElementById('mLast').value = r[16];
     
-    // Address
-    document.getElementById('addressDetails').value = r[18];
+    // Set Dropdown
+    document.getElementById('addressSelect').value = r[18];
 
-    // Religion [19] - Was mapped to Street index in previous logic, now Religion
     const relVal = r[19] || "ROMAN CATHOLIC";
     const relSelect = document.getElementById('religionSelect');
     let exists = false;
-    for(let i=0; i<relSelect.options.length; i++){
-        if(relSelect.options[i].value === relVal) exists = true;
-    }
+    for(let i=0; i<relSelect.options.length; i++) if(relSelect.options[i].value === relVal) exists = true;
+    
     if(exists) {
         relSelect.value = relVal;
         document.getElementById('religionOther').style.display = 'none';
@@ -648,7 +727,6 @@ function startEdit(index) {
         document.getElementById('religionOther').value = relVal;
     }
 
-    // Toggles
     document.getElementById('isOSY').checked = (r[20] === "YES");
     document.getElementById('isPWD').checked = (r[21] === "YES");
     document.getElementById('is4Ps').checked = (r[22] === "YES");
@@ -657,11 +735,10 @@ function startEdit(index) {
 
     editingIndex = index;
     
-    // UI State
     document.getElementById('btn-save').innerHTML = '<i class="fas fa-check"></i> UPDATE RECORD';
     document.getElementById('btn-cancel').style.display = "flex";
     document.getElementById('edit-banner').style.display = "block";
-    document.getElementById('edit-purok-indicator').innerText = r[17]; // Show record's Purok
+    document.getElementById('edit-purok-indicator').innerText = r[17];
     
     closeViewer();
     switchTab('reg');
@@ -677,13 +754,13 @@ function cancelEdit() {
         if(i.type === 'checkbox') i.checked = false;
         else i.value = '';
     });
-    
+    document.getElementById('addressSelect').value = "";
     document.getElementById('citizenship').value = "FILIPINO";
     document.getElementById('religionSelect').value = "ROMAN CATHOLIC";
     checkReligion();
 }
 
-// --- SEARCH & VIEW ---
+// --- RECORDS SEARCH ---
 function renderList(){
   const q = document.getElementById('searchBox').value.toLowerCase();
   const list = document.getElementById('resultList');
@@ -705,7 +782,7 @@ function renderList(){
     div.innerHTML = `
         <div>
             <h5>${r[1]}, ${r[2]} ${r[4]}</h5>
-            <p>PUROK ${r[17]} | ${r[7]}</p>
+            <p>PUROK ${r[17]} | ${r[18] || 'NO ADDR'}</p>
         </div>
         <i class="fas fa-chevron-right" style="color:var(--accent);"></i>
     `;
@@ -732,6 +809,169 @@ function viewRecord(index) {
 
 function closeViewer() { document.getElementById('viewer-overlay').style.display = 'none'; }
 
+// --- HOUSEHOLD LOGIC ---
+function openHHModal(index = -1) {
+    document.getElementById('hh-modal').style.display = 'flex';
+    document.getElementById('hh-pred-list').style.display = 'none';
+    document.getElementById('hh-member-search').value = '';
+    
+    if(index > -1) {
+        // Edit Mode
+        currentEditingHH = households[index];
+        tempHHMembers = [...currentEditingHH.members]; // copy array
+        document.getElementById('hh-id-input').value = currentEditingHH.id;
+    } else {
+        // New Mode
+        currentEditingHH = null;
+        tempHHMembers = [];
+        document.getElementById('hh-id-input').value = "";
+    }
+    renderHHMembersPreview();
+}
+
+function closeHHModal() {
+    document.getElementById('hh-modal').style.display = 'none';
+}
+
+function searchMemberForHH() {
+    const val = document.getElementById('hh-member-search').value.toLowerCase();
+    const list = document.getElementById('hh-pred-list');
+    list.innerHTML = '';
+    
+    if(val.length < 2) { list.style.display = 'none'; return; }
+
+    const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i}))
+                         .filter(m => m.name.toLowerCase().includes(val));
+    
+    if(matches.length > 0) {
+        list.style.display = 'block';
+        matches.slice(0, 5).forEach(m => {
+            const li = document.createElement('li');
+            li.className = 'pred-item';
+            li.innerText = m.name;
+            li.onclick = () => addMemberToHH(m.index);
+            list.appendChild(li);
+        });
+    } else {
+        list.style.display = 'none';
+    }
+}
+
+function addMemberToHH(recordIndex) {
+    if(!tempHHMembers.includes(recordIndex)) {
+        tempHHMembers.push(recordIndex);
+        renderHHMembersPreview();
+        document.getElementById('hh-member-search').value = '';
+        document.getElementById('hh-pred-list').style.display = 'none';
+    } else {
+        alert("Person already in this list.");
+    }
+}
+
+function removeMemberFromHH(tempIndex) {
+    tempHHMembers.splice(tempIndex, 1);
+    renderHHMembersPreview();
+}
+
+function renderHHMembersPreview() {
+    const div = document.getElementById('hh-members-display');
+    div.innerHTML = '';
+    if(tempHHMembers.length === 0) { div.innerHTML = '<small>No members added.</small>'; return; }
+    
+    tempHHMembers.forEach((recIdx, i) => {
+        const r = records[recIdx];
+        if(r) {
+            div.innerHTML += `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                <span>${r[1]}, ${r[2]}</span>
+                <i class="fas fa-times" style="color:red; cursor:pointer;" onclick="removeMemberFromHH(${i})"></i>
+            </div>`;
+        }
+    });
+}
+
+function saveHousehold() {
+    const hhID = document.getElementById('hh-id-input').value.trim();
+    if(!hhID) { alert("Household Number required"); return; }
+    if(tempHHMembers.length === 0) { alert("Add at least one member"); return; }
+
+    if(currentEditingHH) {
+        // Update
+        currentEditingHH.id = hhID;
+        currentEditingHH.members = tempHHMembers;
+        alert("Household Updated");
+    } else {
+        // Create
+        households.push({ id: hhID, members: tempHHMembers });
+        alert("Household Created");
+    }
+    
+    localStorage.setItem('rbiHouseholds', JSON.stringify(households));
+    closeHHModal();
+    renderHouseholdList();
+}
+
+function renderHouseholdList() {
+    const container = document.getElementById('hh-list-container');
+    const search = document.getElementById('searchHH').value.toLowerCase();
+    container.innerHTML = '';
+    
+    // Filter first
+    let filtered = households.filter(hh => {
+        if(hh.id.toLowerCase().includes(search)) return true;
+        // Search members inside
+        return hh.members.some(idx => {
+            const r = records[idx];
+            return r && (r[1].toLowerCase().includes(search) || r[2].toLowerCase().includes(search));
+        });
+    });
+
+    // Pagination Logic
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+    if(hhPage > totalPages) hhPage = totalPages;
+    if(hhPage < 1) hhPage = 1;
+    
+    document.getElementById('hh-page-indicator').innerText = `Page ${hhPage} of ${totalPages}`;
+    document.getElementById('btn-prev-hh').className = `page-btn ${hhPage===1?'disabled':''}`;
+    document.getElementById('btn-next-hh').className = `page-btn ${hhPage===totalPages?'disabled':''}`;
+
+    const start = (hhPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageItems = filtered.slice(start, end);
+
+    if(pageItems.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px;">No Households Found</div>';
+        return;
+    }
+
+    pageItems.forEach(hh => {
+        // Find actual index in main array for editing
+        const realIndex = households.indexOf(hh);
+        const headIdx = hh.members[0];
+        const headName = records[headIdx] ? `${records[headIdx][1]}, ${records[headIdx][2]}` : "Unknown";
+        
+        const div = document.createElement('div');
+        div.className = 'record-card';
+        div.onclick = () => openHHModal(realIndex);
+        div.innerHTML = `
+            <div>
+                <h5 style="color:var(--accent);">HH: ${hh.id}</h5>
+                <p><b>Head:</b> ${headName}</p>
+                <p style="font-size:11px;">Members: ${hh.members.length}</p>
+            </div>
+            <i class="fas fa-pencil-alt" style="color:var(--text-light);"></i>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function changeHHPage(dir) {
+    hhPage += dir;
+    renderHouseholdList();
+}
+
+// --- UTILS ---
 function updateMotherDatalist() {
     const dl = document.getElementById('motherList');
     dl.innerHTML = '';
