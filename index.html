@@ -18,22 +18,11 @@
 
     <script>
       if ('serviceWorker' in navigator) {
-        // We add a timestamp (?v=...) to bypass the browser's cache of the sw.js file
-        navigator.serviceWorker.register('sw.js?v=' + new Date().getTime())
+        // Standard registration without the timestamp to prevent loops
+        navigator.serviceWorker.register('sw.js')
           .then((reg) => {
-            console.log('Service Worker Registered');
-            
-            // If there is an update waiting to happen, tell it to skip waiting immediately
-            if (reg.waiting) {
-              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
+             console.log('Service Worker Registered');
           });
-
-        // Listen for the "controllerchange" event
-        // This fires when the new Service Worker takes over. We reload so the user sees new content.
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        });
       }
     </script>
 
