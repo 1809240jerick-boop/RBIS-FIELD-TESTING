@@ -1,6 +1,6 @@
 // --- 1. VERSION CONTROL ---
 // CHANGE THIS (v1 -> v2) whenever you update index.html
-const CACHE_NAME = 'rbi-system-v11';
+const CACHE_NAME = 'rbi-system-v14';
 
 // --- 2. ASSETS TO CACHE ---
 const CRITICAL_ASSETS = [
@@ -95,3 +95,4 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
