@@ -13,12 +13,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-    <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Fail', err));
-      }
-    </script>
-
     <style>
         /* --- MODERN DESIGN VARIABLES --- */
         :root {
@@ -32,10 +26,12 @@
             --danger: #ef4444;        /* Red 500 */
             --success: #22c55e;       /* Green 500 */
             --warning: #f59e0b;       /* Amber 500 */
+            --male: #3b82f6;
+            --female: #ec4899;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; height: 100%; }
+        html, body { margin: 0; padding: 0; height: 100%; overflow-x: hidden; }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-main); -webkit-tap-highlight-color: transparent; }
 
         /* --- UI COMPONENTS --- */
@@ -63,8 +59,9 @@
         .purok-selector-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.98); }
         .purok-badge { background: var(--warning); color: #000; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 12px; }
 
-        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; }
+        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; min-height: 100vh; position: relative; }
 
+        /* TAB NAV */
         .tab-nav { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 60px; z-index: 800; overflow-x: auto; }
         .tab-btn {
             flex: 1; border: none; background: none; padding: 15px;
@@ -73,8 +70,15 @@
         }
         .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        .content-area { padding: 20px; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* ANIMATIONS FOR SWIPE */
+        .content-area { padding: 20px; display: none; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; }
+        .content-area.active { display: block; opacity: 1; }
+        
+        .slide-in-right { animation: slideInRight 0.3s forwards; }
+        .slide-in-left { animation: slideInLeft 0.3s forwards; }
+        
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         .card-section {
             background: var(--card); padding: 20px; border-radius: 16px;
@@ -158,9 +162,12 @@
 
         /* LISTS */
         .record-card {
-            background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px;
+            background: white; border-radius: 8px; padding: 10px 15px; margin-bottom: 8px;
             border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;
         }
+        .record-card h5 { margin: 0; font-size: 14px; color: var(--primary); font-weight: 600; }
+        .record-card p { margin: 1px 0 0; font-size: 11px; color: var(--text-light); }
+        
         .pred-list {
             list-style: none; padding: 0; margin: 0; border: 1px solid #cbd5e1; border-top: none;
             max-height: 150px; overflow-y: auto; background: white; border-radius: 0 0 8px 8px; display: none;
@@ -170,13 +177,31 @@
         .pred-item:hover { background: #f8fafc; }
 
         .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
-        .page-btn { padding: 8px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; }
+        .page-btn { padding: 8px 12px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .page-btn.disabled { opacity: 0.5; cursor: not-allowed; }
         .config-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
         .hidden { display: none; }
+
+        /* --- PWA INSTALL BUTTON STYLES --- */
+        .install-float-btn {
+            position: fixed; bottom: 25px; right: 20px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white; padding: 12px 20px; border-radius: 50px;
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.6);
+            display: none; /* Hidden by default, shown via JS */
+            z-index: 10000; font-weight: bold; font-size: 14px;
+            align-items: center; gap: 8px; cursor: pointer;
+            border: 2px solid white;
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes bounceIn { from { transform: scale(0); } to { transform: scale(1); } }
     </style>
 </head>
 <body>
+
+<button id="install-btn" class="install-float-btn">
+    <i class="fas fa-download"></i> INSTALL APP
+</button>
 
 <div id="toast-container"></div>
 
@@ -273,7 +298,7 @@
         <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> CONFIG</button>
     </div>
 
-    <div id="tab-registration" class="content-area">
+    <div id="tab-registration" class="content-area active">
         <div id="edit-banner" style="background:var(--warning); color:white; padding:10px; border-radius:8px; margin-bottom:15px; display:none; text-align:center; font-size:13px; font-weight:bold;">
             <i class="fas fa-edit"></i> EDITING RECORD - PUROK <span id="edit-purok-indicator"></span>
         </div>
@@ -361,17 +386,24 @@
         </div>
     </div>
 
-    <div id="tab-records" class="content-area hidden">
+    <div id="tab-records" class="content-area">
         <div class="form-group">
             <input id="searchBox" oninput="renderList()" placeholder="SEARCH BY NAME..." style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         </div>
         <div id="resultList" style="margin-top:15px;"></div>
+        
+        <div class="pagination">
+            <button id="btn-prev-rec" class="page-btn" onclick="changeRecPage(-1)">Prev</button>
+            <span id="rec-page-indicator" style="align-self:center; font-size:12px;">Page 1</span>
+            <button id="btn-next-rec" class="page-btn" onclick="changeRecPage(1)">Next</button>
+        </div>
+
         <div class="card-section" style="margin-top:20px; text-align:center;">
             <button class="btn btn-success" onclick="prepareExcelExport()"><i class="fas fa-file-excel"></i> EXPORT / SHARE EXCEL</button>
         </div>
     </div>
 
-    <div id="tab-households" class="content-area hidden">
+    <div id="tab-households" class="content-area">
         <div style="display:flex; gap:10px; margin-bottom:15px;">
             <input id="searchHH" oninput="renderHouseholdList()" placeholder="Search Household or Member..." style="flex:1;">
             <button class="btn btn-primary" style="width:auto;" onclick="openHHModal()"><i class="fas fa-plus"></i></button>
@@ -384,7 +416,7 @@
         </div>
     </div>
 
-    <div id="tab-config" class="content-area hidden">
+    <div id="tab-config" class="content-area">
         <div class="card-section">
             <h5 class="section-title">SYSTEM CONFIGURATION</h5>
             <div class="form-group">
@@ -425,7 +457,40 @@
 <style> @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } </style>
 
 <script>
-// --- CONFIGURATION ---
+// --- PWA INSTALLATION & SERVICE WORKER LOGIC (NEW FEATURE) ---
+let deferredPrompt;
+const installBtn = document.getElementById('install-btn');
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('Service Worker Registered'))
+    .catch((err) => console.log('SW Fail', err));
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show the custom force install button
+    installBtn.style.display = 'flex';
+});
+
+installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        deferredPrompt = null;
+        installBtn.style.display = 'none'; // Hide button after action
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    installBtn.style.display = 'none'; // Ensure hidden if installed
+    showToast("App Installed Successfully!", "success");
+});
+
+// --- EXISTING CONFIGURATION ---
 const HEADERS = [
     "INHABITANT TYPE", "LAST NAME", "FIRST NAME", "MIDDLE NAME", "SUFFIX", 
     "BIRTH PLACE", "BIRTHDATE (YYYY-MM-DD)", "SEX", "CIVIL STATUS", "CITIZENSHIP", 
@@ -447,10 +512,50 @@ let settings = JSON.parse(localStorage.getItem('rbi_settings')) || {
 let currentGlobalPurok = localStorage.getItem('globalPurok') || "1";
 let editingIndex = -1; 
 let hhPage = 1;
+let recPage = 1;
 let currentEditingHH = null; 
-let tempHHMembers = []; // Array of objects {index: X, role: "Y"}
+let tempHHMembers = []; 
 let promptCallback = null;
 let confirmCallback = null;
+
+const TABS = ['reg', 'rec', 'hh', 'conf'];
+let currentTab = 'reg';
+
+// --- TOUCH GESTURE LOGIC ---
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener('touchend', e => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    const threshold = 50; // Min Swipe distance
+    if (touchEndX < touchStartX - threshold) {
+        // Swiped Left -> Next Tab
+        changeTabByOrder(1);
+    }
+    if (touchEndX > touchStartX + threshold) {
+        // Swiped Right -> Prev Tab
+        changeTabByOrder(-1);
+    }
+}
+
+function changeTabByOrder(dir) {
+    const currentIndex = TABS.indexOf(currentTab);
+    let nextIndex = currentIndex + dir;
+    if(nextIndex < 0) nextIndex = 0;
+    if(nextIndex >= TABS.length) nextIndex = TABS.length - 1;
+    
+    if(nextIndex !== currentIndex) {
+        switchTab(TABS[nextIndex], dir);
+    }
+}
 
 // --- UTILS: TOASTS & MODALS ---
 function showToast(msg, type = 'info') {
@@ -593,19 +698,28 @@ function removeAddress(i) {
 }
 
 // --- TAB SWITCHING ---
-function switchTab(tab) {
+function switchTab(tab, dir = 0) {
+    currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.content-area').forEach(c => c.classList.add('hidden'));
-    if(tab === 'reg') {
-        document.getElementById('tab-registration').classList.remove('hidden'); document.getElementById('btn-reg').classList.add('active');
-    } else if(tab === 'rec') {
-        document.getElementById('tab-records').classList.remove('hidden'); document.getElementById('btn-rec').classList.add('active'); renderList();
-    } else if (tab === 'hh') {
-        document.getElementById('tab-households').classList.remove('hidden'); document.getElementById('btn-hh').classList.add('active'); renderHouseholdList();
-    } else if (tab === 'conf') {
-        document.getElementById('tab-config').classList.remove('hidden'); document.getElementById('btn-conf').classList.add('active');
-    }
+    
+    // Animation Logic
+    const contents = document.querySelectorAll('.content-area');
+    contents.forEach(c => {
+        c.classList.remove('active', 'slide-in-left', 'slide-in-right');
+    });
+
+    const activeContent = document.getElementById(`tab-${tab === 'reg' ? 'registration' : (tab === 'rec' ? 'records' : (tab === 'hh' ? 'households' : 'config'))}`);
+    activeContent.classList.add('active');
+    
+    if(dir > 0) activeContent.classList.add('slide-in-right');
+    else if(dir < 0) activeContent.classList.add('slide-in-left');
+
+    document.getElementById(`btn-${tab}`).classList.add('active');
+
+    if(tab === 'rec') renderList();
+    if(tab === 'hh') renderHouseholdList();
 }
+
 function checkReligion() {
     const sel = document.getElementById('religionSelect');
     document.getElementById('religionOther').style.display = (sel.value === 'OTHERS') ? 'block' : 'none';
@@ -697,19 +811,45 @@ function cancelEdit() {
     document.getElementById('religionSelect').value = "ROMAN CATHOLIC"; checkReligion();
 }
 
-// --- RECORDS SEARCH ---
+// --- RECORDS SEARCH & PAGINATION ---
 function renderList(){
   const q = document.getElementById('searchBox').value.toLowerCase();
   const list = document.getElementById('resultList'); list.innerHTML = '';
-  const filtered = records.map((r, i) => ({data: r, index: i})).filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
-  if(filtered.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">NO RECORDS FOUND</div>'; return; }
-  filtered.forEach((item) => {
-    const r = item.data; const div = document.createElement('div'); div.className = 'record-card';
+  
+  let filtered = records.map((r, i) => ({data: r, index: i})).filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
+
+  // Pagination Logic
+  const itemsPerPage = 7;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
+  if(recPage > totalPages) recPage = totalPages; if(recPage < 1) recPage = 1;
+
+  document.getElementById('rec-page-indicator').innerText = `Page ${recPage} of ${totalPages}`;
+  document.getElementById('btn-prev-rec').className = `page-btn ${recPage===1?'disabled':''}`;
+  document.getElementById('btn-next-rec').className = `page-btn ${recPage===totalPages?'disabled':''}`;
+
+  const pageItems = filtered.slice((recPage - 1) * itemsPerPage, (recPage - 1) * itemsPerPage + itemsPerPage);
+
+  if(pageItems.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8;">NO RECORDS FOUND</div>'; return; }
+  
+  pageItems.forEach((item) => {
+    const r = item.data; 
+    const div = document.createElement('div'); div.className = 'record-card';
     div.onclick = () => viewRecord(item.index); 
-    div.innerHTML = `<div><h5>${r[1]}, ${r[2]} ${r[4]}</h5><p>PUROK ${r[17]} | ${r[18] || 'NO ADDR'}</p></div><i class="fas fa-chevron-right" style="color:var(--accent);"></i>`;
+    
+    let genderIcon = r[7] === 'MALE' ? '<i class="fas fa-mars" style="color:var(--male);"></i>' : '<i class="fas fa-venus" style="color:var(--female);"></i>';
+    
+    div.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+            ${genderIcon}
+            <div><h5>${r[1]}, ${r[2]} ${r[4]}</h5><p>PUROK ${r[17]}</p></div>
+        </div>
+        <i class="fas fa-chevron-right" style="color:var(--accent); font-size:12px;"></i>
+    `;
     list.appendChild(div);
   });
 }
+function changeRecPage(dir) { recPage += dir; renderList(); }
+
 function viewRecord(index) {
     const r = records[index];
     const html = HEADERS.map((h, i) => `<div style="border-bottom:1px solid #eee; padding:8px 0;"><span style="font-size:10px; color:#94a3b8; display:block;">${h}</span><span style="font-size:14px; font-weight:600; color:#334155;">${r[i] || '-'}</span></div>`).join('');
@@ -719,7 +859,7 @@ function viewRecord(index) {
 }
 function closeViewer() { document.getElementById('viewer-overlay').style.display = 'none'; }
 
-// --- HOUSEHOLD LOGIC (WITH ROLES) ---
+// --- HOUSEHOLD LOGIC (WITH ROLES & FILTERING) ---
 function openHHModal(index = -1) {
     document.getElementById('hh-modal').style.display = 'flex';
     document.getElementById('hh-pred-list').style.display = 'none';
@@ -727,10 +867,9 @@ function openHHModal(index = -1) {
     
     if(index > -1) { // Edit Mode
         currentEditingHH = households[index];
-        // Normalize old data format [1, 2] to new format [{index:1, role:"MEMBER"}]
         tempHHMembers = currentEditingHH.members.map(m => {
             if(typeof m === 'object') return m; 
-            return { index: m, role: "MEMBER" }; // Backward compatibility
+            return { index: m, role: "MEMBER" }; 
         });
         document.getElementById('hh-id-input').value = currentEditingHH.id;
     } else { // New Mode
@@ -744,10 +883,29 @@ function searchMemberForHH() {
     const val = document.getElementById('hh-member-search').value.toLowerCase();
     const list = document.getElementById('hh-pred-list'); list.innerHTML = '';
     if(val.length < 2) { list.style.display = 'none'; return; }
-    const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i})).filter(m => m.name.toLowerCase().includes(val));
-    if(matches.length > 0) {
+
+    // Collect all indices of members already in OTHER households
+    const occupiedIndices = new Set();
+    households.forEach(hh => {
+        // If we are editing, don't count the current household's members as "occupied" (so we can add them back if we deleted them from the active list, but we handle that via tempHHMembers check)
+        // Strictly speaking: exclude anyone who is in a household, unless that household is the one we are editing.
+        if(currentEditingHH && hh === currentEditingHH) return;
+        
+        hh.members.forEach(m => {
+             let idx = (typeof m === 'object') ? m.index : m;
+             occupiedIndices.add(idx);
+        });
+    });
+
+    const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i}))
+                         .filter(m => m.name.toLowerCase().includes(val));
+    
+    // Filter matches
+    const finalMatches = matches.filter(m => !occupiedIndices.has(m.index));
+
+    if(finalMatches.length > 0) {
         list.style.display = 'block';
-        matches.slice(0, 5).forEach(m => {
+        finalMatches.slice(0, 5).forEach(m => {
             const li = document.createElement('li'); li.className = 'pred-item'; li.innerText = m.name;
             li.onclick = () => addMemberToHH(m.index); list.appendChild(li);
         });
@@ -777,14 +935,13 @@ function renderHHMembersPreview() {
     tempHHMembers.forEach((mObj, i) => {
         const r = records[mObj.index];
         if(r) {
-            // Dropdown for Role Selection
             const roles = ["MEMBER", "HEAD OF HOUSEHOLD", "SPOUSE", "SON", "DAUGHTER", "OTHERS"];
             let roleOptions = roles.map(role => `<option value="${role}" ${mObj.role===role?'selected':''}>${role}</option>`).join('');
             
             div.innerHTML += `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:5px;">
                 <div style="flex:1;">
-                    <div style="font-weight:600;">${r[1]}, ${r[2]}</div>
+                    <div style="font-weight:600; font-size:13px;">${r[1]}, ${r[2]}</div>
                     <select onchange="updateMemberRole(${i}, this.value)" style="padding:4px; font-size:11px; margin-top:2px; width:90%;">${roleOptions}</select>
                 </div>
                 <i class="fas fa-times" style="color:red; cursor:pointer; padding:5px;" onclick="removeMemberFromHH(${i})"></i>
@@ -830,9 +987,8 @@ function renderHouseholdList() {
 
     pageItems.forEach(hh => {
         const realIndex = households.indexOf(hh);
-        // Find Head
         let heads = hh.members.filter(m => (typeof m === 'object' && m.role === 'HEAD OF HOUSEHOLD'));
-        if(heads.length === 0 && hh.members.length > 0) heads = [hh.members[0]]; // Fallback
+        if(heads.length === 0 && hh.members.length > 0) heads = [hh.members[0]]; 
         
         let headNames = heads.map(h => {
              let idx = (typeof h === 'object') ? h.index : h;
@@ -860,7 +1016,7 @@ function autoFillMother(inputObj) {
 async function prepareExcelExport(){
   if(records.length === 0){ showToast("No records to export.", "error"); return; }
   
-  showLoading(true, "GENERATING EXCEL", "Preparing file for sharing...");
+  showLoading(true, "GENERATING EXCEL", "Opening Share Options...");
   
   setTimeout(async () => {
       try {
@@ -877,28 +1033,28 @@ async function prepareExcelExport(){
 
           showLoading(false);
 
-          // Share API or Download
+          // AUTO TRIGGER SHARE
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              showCustomConfirm("SHARE OR DOWNLOAD?", "Do you want to Share this file (e.g., Messenger/Email) or just Download it?", () => {
-                  navigator.share({
+              try {
+                  await navigator.share({
                       files: [file],
                       title: 'RBI Export',
-                      text: 'Here is the latest RBI Data.'
-                  }).catch(err => {
-                      console.log('Share failed, downloading instead', err);
-                      downloadBlob(blob, filename);
+                      text: 'RBI Data Export File'
                   });
-              });
+              } catch (err) {
+                  // User cancelled or share failed, fallback silently or just stop
+                  console.log('Share action ended', err);
+              }
           } else {
-              // Fallback to direct download
+              // Fallback to download if sharing isn't supported on device
               downloadBlob(blob, filename);
-              showToast("Sharing not supported. Downloading...", "info");
+              showToast("Sharing not supported. File Downloaded.", "info");
           }
       } catch (e) {
           showLoading(false);
           showToast("Export Failed: " + e.message, "error");
       }
-  }, 500); // Fake delay for UI
+  }, 800);
 }
 
 function downloadBlob(blob, filename) {
