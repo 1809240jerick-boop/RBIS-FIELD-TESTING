@@ -184,7 +184,7 @@
         <div style="margin-top:10px; font-size:11px; cursor:pointer; color:#1e90ff;" onclick="forgotPassword()">Forgot Password?</div>
         
         <div style="margin-top:25px; border-top:1px solid #eee; padding-top:10px;">
-            <small style="color:red; cursor:pointer; font-weight:bold;" onclick="hardReset()">[DEV] Reset Password</small>
+            
         </div>
     </div>
 </div>
@@ -354,15 +354,6 @@ function forgotPassword() {
         }
     } else {
         if(input) alert("Invalid Dynamic Code.");
-    }
-}
-
-// --- HARD RESET (FIXES LOGIN ISSUES) ---
-function hardReset() {
-    if(confirm("Are you sure? This will clear your saved password and let you set a new one. (Records will NOT be deleted).")) {
-        localStorage.removeItem('rbi_settings');
-        alert("Password cleared! The page will reload. Please set a new password.");
-        location.reload();
     }
 }
 
@@ -618,3 +609,4 @@ renderList();
 </script>
 </body>
 </html>
+
