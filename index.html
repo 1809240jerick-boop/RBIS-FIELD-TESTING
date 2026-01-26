@@ -18,11 +18,14 @@
 
     <script>
       if ('serviceWorker' in navigator) {
-        // Standard registration without the timestamp to prevent loops
+        // Standard registration. This stops the infinite loop.
+        // The new version will install in the background.
+        // The user will see the new version the NEXT time they open the app.
         navigator.serviceWorker.register('sw.js')
           .then((reg) => {
              console.log('Service Worker Registered');
-          });
+          })
+          .catch(err => console.log('SW Registration failed', err));
       }
     </script>
 
