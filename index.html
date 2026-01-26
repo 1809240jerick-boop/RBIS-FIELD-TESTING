@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RBI System | SEC JERICK</title>
+    <title>RBI FIELD | SEC JERICK</title>
     
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon.png">
@@ -59,9 +59,9 @@
         .purok-selector-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.98); }
         .purok-badge { background: var(--warning); color: #000; padding: 2px 8px; border-radius: 10px; font-weight: 800; font-size: 12px; }
 
-        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; min-height: 100vh; position: relative; }
+        .app-container { max-width: 600px; margin: 0 auto; padding-bottom: 80px; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
 
-        /* TAB NAV - UPDATED FOR MOBILE FIT */
+        /* TAB NAV */
         .tab-nav { 
             display: flex; 
             background: white; 
@@ -71,25 +71,25 @@
             z-index: 800; 
             overflow-x: auto; 
             white-space: nowrap;
-            -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
-            scrollbar-width: none; /* Hide scrollbar Firefox */
+            -webkit-overflow-scrolling: touch; 
+            scrollbar-width: none; 
         }
-        .tab-nav::-webkit-scrollbar { display: none; /* Hide scrollbar Chrome/Safari */ }
+        .tab-nav::-webkit-scrollbar { display: none; }
 
         .tab-btn {
-            flex: 1 0 auto; /* Allow grow but dont shrink too much */
+            flex: 1 0 auto; 
             border: none; background: none; 
-            padding: 15px 10px; /* Reduced padding slightly for better fit */
+            padding: 15px 10px; 
             font-size: 12px; font-weight: 600; color: var(--text-light);
             cursor: pointer; border-bottom: 3px solid transparent; 
             transition: 0.2s; white-space: nowrap;
             text-align: center;
-            min-width: 80px; /* Ensure buttons don't get too small */
+            min-width: 80px; 
         }
         .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-        /* ANIMATIONS FOR SWIPE */
-        .content-area { padding: 20px; display: none; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; }
+        /* CONTENT AREAS */
+        .content-area { padding: 20px; display: none; opacity: 0; transition: transform 0.3s ease, opacity 0.3s ease; flex: 1; }
         .content-area.active { display: block; opacity: 1; }
         
         .slide-in-right { animation: slideInRight 0.3s forwards; }
@@ -140,10 +140,9 @@
         }
         input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
 
-        /* --- TOAST NOTIFICATIONS (FIXED Z-INDEX) --- */
+        /* TOASTS */
         #toast-container {
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            /* Increased Z-Index to be above everything, including Login Overlay */
             z-index: 99999; 
             display: flex; flex-direction: column; gap: 10px; align-items: center;
         }
@@ -157,7 +156,7 @@
         .toast.info { background: #3b82f6; }
         @keyframes slideUpFade { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        /* --- MODALS --- */
+        /* MODALS */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
@@ -171,14 +170,6 @@
             max-height: 90vh; overflow-y: auto;
         }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        /* LOADING SPINNER */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px;
-            border-radius: 50%; border-left-color: var(--accent);
-            animation: spin 1s linear infinite; margin: 0 auto 15px auto;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         /* LISTS */
         .record-card {
@@ -202,14 +193,42 @@
         .config-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
         .hidden { display: none; }
 
-        /* --- PWA INSTALL BUTTON STYLES --- */
+        /* LOADING SPINNER */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1); width: 40px; height: 40px;
+            border-radius: 50%; border-left-color: var(--accent);
+            animation: spin 1s linear infinite; margin: 0 auto 15px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* FOOTER BRANDING */
+        .app-footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 10px;
+            color: var(--text-light);
+            letter-spacing: 1px;
+            margin-top: auto;
+        }
+
+        /* STATIC EXPORT BUTTON CONTAINER */
+        .static-export-bar {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e2e8f0;
+            z-index: 500;
+            margin: 0 -20px -20px -20px; /* Counteract parent padding */
+        }
+
+        /* PWA INSTALL BUTTON */
         .install-float-btn {
             position: fixed; bottom: 25px; right: 20px;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: white; padding: 12px 20px; border-radius: 50px;
             box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.6);
-            display: none; /* Hidden by default, shown via JS */
-            z-index: 10000; font-weight: bold; font-size: 14px;
+            display: none; z-index: 10000; font-weight: bold; font-size: 14px;
             align-items: center; gap: 8px; cursor: pointer;
             border: 2px solid white;
             animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -241,6 +260,18 @@
         <div class="spinner"></div>
         <h3 id="loading-title" style="margin:0; color:var(--primary);">PROCESSING...</h3>
         <p id="loading-desc" style="font-size:13px; color:#666; margin: 10px 0 0 0;">Please wait.</p>
+    </div>
+</div>
+
+<div id="share-modal" class="modal-overlay">
+    <div class="modal-box">
+        <div style="color:var(--success); font-size:40px; margin-bottom:10px;"><i class="fas fa-file-excel"></i></div>
+        <h3 style="margin:0;">EXPORT READY</h3>
+        <p style="font-size:13px; color:#666; margin: 10px 0 20px 0;">File downloaded. Do you want to share it?</p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-ghost" onclick="closeShareModal()">CLOSE</button>
+            <button class="btn btn-primary" onclick="triggerShareAction()">SHARE FILE</button>
+        </div>
     </div>
 </div>
 
@@ -301,8 +332,7 @@
 
     <div class="context-bar">
         <div class="context-info">
-            <h4>RBI SYSTEM</h4>
-            <small>SEC JERICK™</small>
+            <h4>RBI FIELD</h4>
         </div>
         <div class="purok-selector-btn" onclick="openPurokInputModal()">
             <span>PUROK</span>
@@ -410,7 +440,7 @@
         <div class="form-group">
             <input id="searchBox" oninput="renderList()" placeholder="SEARCH BY NAME..." style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         </div>
-        <div id="resultList" style="margin-top:15px;"></div>
+        <div id="resultList" style="margin-top:15px; margin-bottom: 20px;"></div>
         
         <div class="pagination">
             <button id="btn-prev-rec" class="page-btn" onclick="changeRecPage(-1)">Prev</button>
@@ -418,8 +448,8 @@
             <button id="btn-next-rec" class="page-btn" onclick="changeRecPage(1)">Next</button>
         </div>
 
-        <div class="card-section" style="margin-top:20px; text-align:center;">
-            <button class="btn btn-success" onclick="prepareExcelExport()"><i class="fas fa-file-excel"></i> EXPORT / SHARE EXCEL</button>
+        <div class="static-export-bar">
+            <button class="btn btn-success" onclick="executeDownloadOnly()"><i class="fas fa-file-excel"></i> EXPORT TO EXCEL</button>
         </div>
     </div>
 
@@ -462,6 +492,8 @@
         </div>
     </div>
 
+    <div class="app-footer">SEC JERICK™</div>
+
 </div>
 
 <input type="hidden" id="tempPurokTarget">
@@ -477,31 +509,23 @@
 <style> @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } } </style>
 
 <script>
-// --- PWA INSTALLATION & SERVICE WORKER LOGIC (NEW FEATURE) ---
+// --- PWA INSTALLATION & SERVICE WORKER LOGIC ---
 let deferredPrompt;
 const installBtn = document.getElementById('install-btn');
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').then(reg => {
-        console.log('Service Worker Registered');
-
-        // CHECK FOR UPDATES
         reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
-            
             newWorker.addEventListener('statechange', () => {
-                // Check if there is already a SW controlling (meaning this is an update, not first install)
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     showToast("New Update Available! Please refresh.", "success");
-                    // Optional: You could reload automatically if you wanted:
-                    // window.location.reload(); 
                 }
             });
         });
     }).catch(err => console.log('SW Fail', err));
 }
 
-// Custom Install Button Logic
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -535,7 +559,6 @@ const HEADERS = [
 ];
 
 let records = JSON.parse(localStorage.getItem('rbiRecords')) || [];
-// HouseHold Structure: { id: "...", members: [{index: 1, role: "HEAD"}] }
 let households = JSON.parse(localStorage.getItem('rbiHouseholds')) || [];
 let settings = JSON.parse(localStorage.getItem('rbi_settings')) || { 
     custom_password: '', purok_max: 10, addresses: []
@@ -550,6 +573,7 @@ let currentEditingHH = null;
 let tempHHMembers = []; 
 let promptCallback = null;
 let confirmCallback = null;
+let currentExportFile = null; // Stores file for sharing
 
 const TABS = ['reg', 'rec', 'hh', 'conf'];
 let currentTab = 'reg';
@@ -568,15 +592,9 @@ document.addEventListener('touchend', e => {
 });
 
 function handleSwipe() {
-    const threshold = 50; // Min Swipe distance
-    if (touchEndX < touchStartX - threshold) {
-        // Swiped Left -> Next Tab
-        changeTabByOrder(1);
-    }
-    if (touchEndX > touchStartX + threshold) {
-        // Swiped Right -> Prev Tab
-        changeTabByOrder(-1);
-    }
+    const threshold = 50; 
+    if (touchEndX < touchStartX - threshold) changeTabByOrder(1);
+    if (touchEndX > touchStartX + threshold) changeTabByOrder(-1);
 }
 
 function changeTabByOrder(dir) {
@@ -585,9 +603,7 @@ function changeTabByOrder(dir) {
     if(nextIndex < 0) nextIndex = 0;
     if(nextIndex >= TABS.length) nextIndex = TABS.length - 1;
     
-    if(nextIndex !== currentIndex) {
-        switchTab(TABS[nextIndex], dir);
-    }
+    if(nextIndex !== currentIndex) switchTab(TABS[nextIndex], dir);
 }
 
 // --- UTILS: TOASTS & MODALS ---
@@ -665,6 +681,7 @@ function attemptLogin() {
 function forgotPassword() {
     showCustomPrompt("ADMIN RECOVERY", "Enter Dynamic Admin Code:", (code) => {
         if(code === getDynamicPassword()) {
+            // FIX: Added small timeout to ensure previous modal closes before opening the new one
             setTimeout(() => {
                 showCustomPrompt("RESET PASSWORD", "Enter New Password:", (newPass) => {
                     if(newPass && newPass.trim().length > 0) {
@@ -735,7 +752,6 @@ function switchTab(tab, dir = 0) {
     currentTab = tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     
-    // Animation Logic
     const contents = document.querySelectorAll('.content-area');
     contents.forEach(c => {
         c.classList.remove('active', 'slide-in-left', 'slide-in-right');
@@ -851,7 +867,6 @@ function renderList(){
   
   let filtered = records.map((r, i) => ({data: r, index: i})).filter(item => item.data[1].toLowerCase().includes(q) || item.data[2].toLowerCase().includes(q));
 
-  // Pagination Logic
   const itemsPerPage = 7;
   const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
   if(recPage > totalPages) recPage = totalPages; if(recPage < 1) recPage = 1;
@@ -917,13 +932,9 @@ function searchMemberForHH() {
     const list = document.getElementById('hh-pred-list'); list.innerHTML = '';
     if(val.length < 2) { list.style.display = 'none'; return; }
 
-    // Collect all indices of members already in OTHER households
     const occupiedIndices = new Set();
     households.forEach(hh => {
-        // If we are editing, don't count the current household's members as "occupied" (so we can add them back if we deleted them from the active list, but we handle that via tempHHMembers check)
-        // Strictly speaking: exclude anyone who is in a household, unless that household is the one we are editing.
         if(currentEditingHH && hh === currentEditingHH) return;
-        
         hh.members.forEach(m => {
              let idx = (typeof m === 'object') ? m.index : m;
              occupiedIndices.add(idx);
@@ -933,7 +944,6 @@ function searchMemberForHH() {
     const matches = records.map((r, i) => ({name: `${r[1]}, ${r[2]}`, index: i}))
                          .filter(m => m.name.toLowerCase().includes(val));
     
-    // Filter matches
     const finalMatches = matches.filter(m => !occupiedIndices.has(m.index));
 
     if(finalMatches.length > 0) {
@@ -947,7 +957,7 @@ function searchMemberForHH() {
 
 function addMemberToHH(recordIndex) {
     if(!tempHHMembers.some(m => m.index === recordIndex)) {
-        tempHHMembers.push({ index: recordIndex, role: "MEMBER" }); // Default role
+        tempHHMembers.push({ index: recordIndex, role: "MEMBER" }); 
         renderHHMembersPreview();
         document.getElementById('hh-member-search').value = ''; document.getElementById('hh-pred-list').style.display = 'none';
     } else showToast("Person already in this list.", "error");
@@ -1046,59 +1056,69 @@ function autoFillMother(inputObj) {
     if(found) { document.getElementById('mLast').value = found[16]; document.getElementById('mFirst').value = found[14]; document.getElementById('mMiddle').value = found[15]; }
 }
 
-async function prepareExcelExport(){
-  if(records.length === 0){ showToast("No records to export.", "error"); return; }
-  
-  // Show loading but keep the async operation attached to the click event context as much as possible
-  showLoading(true, "GENERATING EXCEL", "Please wait...");
-  
-  // Reduced timeout to ensure the browser sees this as a direct user action (crucial for mobile Share)
-  setTimeout(async () => {
-      try {
-          const wb = XLSX.utils.book_new();
-          const instructionData = [["INSTRUCTIONS"], ["Generated by SEC JERICK RBI System"], ["See 'DATA' sheet."]];
-          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
-          const allData = [HEADERS, ...records];
-          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
+// --- NEW SPLIT EXPORT LOGIC ---
+function executeDownloadOnly() {
+    if(records.length === 0){ showToast("No records to export.", "error"); return; }
+    
+    showLoading(true, "GENERATING EXCEL", "Preparing Download...");
+    
+    setTimeout(() => {
+        try {
+            const wb = XLSX.utils.book_new();
+            const instructionData = [["INSTRUCTIONS"], ["Generated by RBI FIELD System"], ["See 'DATA' sheet."]];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(instructionData), "INSTRUCTIONS");
+            const allData = [HEADERS, ...records];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
 
-          const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-          const blob = new Blob([wbout], {type:"application/octet-stream"});
-          const filename = `RBI_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
-          const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+            const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+            const blob = new Blob([wbout], {type:"application/octet-stream"});
+            const filename = `RBI_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+            const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
-          showLoading(false); // Hide loading immediately
+            // 1. Force Download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
 
-          // CHECK SHARE CAPABILITY
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              try {
-                  await navigator.share({
-                      files: [file],
-                      title: 'RBI Export',
-                      text: 'RBI Data Export File'
-                  });
-              } catch (err) {
-                  // User cancelled or share failed, fallback silently or just stop
-                  console.log('Share action ended', err);
-                  // FALLBACK: If share fails/cancels, we STILL download the file
-                  downloadBlob(blob, filename);
-              }
-          } else {
-              // Fallback to download if sharing isn't supported on device
-              downloadBlob(blob, filename);
-              showToast("Sharing not supported. File Downloaded.", "info");
-          }
-      } catch (e) {
-          showLoading(false);
-          showToast("Export Failed: " + e.message, "error");
-      }
-  }, 100); // 100ms is safe for UI update but fast enough for Share API
+            // 2. Store file for later sharing
+            currentExportFile = file;
+
+            showLoading(false);
+            
+            // 3. Open Share Modal after successful download
+            setTimeout(() => {
+                document.getElementById('share-modal').style.display = 'flex';
+            }, 500);
+
+        } catch (e) {
+            showLoading(false);
+            showToast("Export Error: " + e.message, "error");
+        }
+    }, 100);
 }
 
-function downloadBlob(blob, filename) {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+function triggerShareAction() {
+    if(!currentExportFile) return;
+    
+    if (navigator.canShare && navigator.canShare({ files: [currentExportFile] })) {
+        navigator.share({
+            files: [currentExportFile],
+            title: 'RBI Export',
+            text: 'RBI Field Data Export'
+        }).then(() => {
+            closeShareModal();
+        }).catch((err) => {
+            console.log('Share closed/failed', err);
+        });
+    } else {
+        showToast("Sharing not supported on this device.", "info");
+        closeShareModal();
+    }
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').style.display = 'none';
 }
 </script>
 </body>
