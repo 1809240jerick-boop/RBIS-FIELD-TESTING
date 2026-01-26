@@ -1,6 +1,6 @@
 // --- 1. VERSION CONTROL ---
 // CHANGE THIS (v12 -> v13) to trigger the "New Update" toast in index.html
-const CACHE_NAME = 'rbi-system-v12';
+const CACHE_NAME = 'rbi-system-v13';
 
 // --- 2. ASSETS TO CACHE ---
 const CRITICAL_ASSETS = [
@@ -63,3 +63,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
