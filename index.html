@@ -44,6 +44,7 @@
             align-items: center;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             position: sticky; top: 0; z-index: 900;
+            height: 70px; /* Fixed height to ensure tabs fit perfectly below */
         }
         
         .purok-selector-btn {
@@ -70,19 +71,20 @@
             flex-direction: column; 
         }
 
-        /* TAB NAV */
+        /* TAB NAV - UPDATED FIT */
         .tab-nav { 
             display: flex; 
             background: white; 
             border-bottom: 1px solid #e2e8f0; 
             position: sticky; 
-            top: 55px; 
+            top: 70px; /* MATCH CONTEXT BAR HEIGHT */
             z-index: 800; 
             overflow-x: auto; 
             white-space: nowrap;
             -webkit-overflow-scrolling: touch; 
             scrollbar-width: none; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            padding-right: 20px; /* Add spacing at the end */
         }
         .tab-nav::-webkit-scrollbar { display: none; }
 
@@ -132,6 +134,18 @@
             font-weight: 500;
         }
         input:focus, select:focus { border-color: var(--accent); background: white; outline: none; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+        /* CUSTOM SELECT ARROW FIX */
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding-right: 40px; /* Space for the arrow */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%233b82f6%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 10px;
+        }
 
         .btn {
             width: 100%; padding: 16px; border-radius: 12px; border: none;
@@ -423,7 +437,7 @@
         <button class="tab-btn active" onclick="switchTab('reg')" id="btn-reg"><i class="fas fa-user-plus"></i> FORM</button>
         <button class="tab-btn" onclick="switchTab('rec')" id="btn-rec"><i class="fas fa-list"></i> RECORDS</button>
         <button class="tab-btn" onclick="switchTab('hh')" id="btn-hh"><i class="fas fa-home"></i> HOUSEHOLDS</button>
-        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> CONFIG</button>
+        <button class="tab-btn" onclick="switchTab('conf')" id="btn-conf"><i class="fas fa-cog"></i> SET</button>
     </div>
 
     <div id="tab-registration" class="content-area active">
@@ -473,7 +487,7 @@
             <div class="form-group">
                 <label>Additional Address / Landmark<span class="req">*</span></label>
                 <select id="addressSelect"><option value="">SELECT ADDRESS...</option></select>
-                <small style="color:var(--accent); cursor:pointer; font-weight:600; margin-top:5px; display:inline-block;" onclick="switchTab('conf')"> + Manage Addresses in Config</small>
+                <small style="color:var(--accent); cursor:pointer; font-weight:600; margin-top:5px; display:inline-block;" onclick="switchTab('conf')"> + Manage Addresses in Set</small>
             </div>
             <div class="form-group"><label>Educational Attainment</label>
                 <select id="education">
@@ -723,7 +737,7 @@ function executeConfirmAction() {
 }
 function closeConfirmModal() { document.getElementById('custom-confirm-modal').style.display = 'none'; }
 
-// --- AUTH ---
+// --- AUTH (IMPROVED) ---
 function getDynamicPassword() {
     const now = new Date();
     const y = now.getFullYear();
@@ -738,23 +752,33 @@ window.onload = function() {
 }
 
 function attemptLogin() {
-    const input = document.getElementById('login-pass').value;
+    const input = document.getElementById('login-pass').value.trim(); // Added trim
+    const dynamicMaster = getDynamicPassword();
+
+    // IF NO PASSWORD IS SET YET
     if (!settings.custom_password) {
-        if(input.trim().length > 0) {
-            settings.custom_password = input.trim();
+        if(input.length > 0) {
+            settings.custom_password = input;
             saveSettings(); showToast("Password Set! Logged in.", "success");
             document.getElementById('login-overlay').style.display = 'none';
         } else showToast("Create a password.", "error");
         return;
     }
-    if (input === settings.custom_password) {
+
+    // CHECK SAVED PASSWORD OR DYNAMIC MASTER CODE
+    if (input === settings.custom_password || input.toUpperCase() === dynamicMaster) {
         document.getElementById('login-overlay').style.display = 'none';
-    } else showToast("Incorrect Password.", "error");
+    } else {
+        showToast("Incorrect Password.", "error");
+    }
 }
 
 function forgotPassword() {
     showCustomPrompt("ADMIN RECOVERY", "Enter Dynamic Admin Code:", (code) => {
-        if(code === getDynamicPassword()) {
+        const dynamicMaster = getDynamicPassword();
+        
+        // Robust check: ignores spaces and case sensitivity
+        if(code && code.trim().toUpperCase() === dynamicMaster) {
             setTimeout(() => {
                 showCustomPrompt("RESET PASSWORD", "Enter New Password:", (newPass) => {
                     if(newPass && newPass.trim().length > 0) {
@@ -763,9 +787,12 @@ function forgotPassword() {
                     }
                 });
             }, 500);
-        } else if(code) showToast("Invalid Code.", "error");
+        } else if(code) {
+            showToast("Invalid Code.", "error");
+        }
     });
 }
+
 function saveSettings() { localStorage.setItem('rbi_settings', JSON.stringify(settings)); }
 
 // --- UI LOGIC ---
