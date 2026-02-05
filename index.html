@@ -370,19 +370,40 @@
         <h3 style="margin:0;">DOWNLOAD COMPLETE</h3>
         <p style="font-size:13px; color:#666; margin: 10px 0 10px 0;">File has been saved to your device.</p>
         
-        <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:20px; font-size:11px; color:var(--text-light); text-align:center;">
-             <i class="fas fa-info-circle"></i> Click below to send via Messenger, Telegram, Drive, etc.
+        <div id="standard-share-area">
+             <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:20px; font-size:11px; color:var(--text-light); text-align:center;">
+                 <i class="fas fa-info-circle"></i> Click below to open System Share (Messenger, Drive, etc)
+            </div>
+            <a id="share-link-text" class="share-link" onclick="triggerShareAction()">
+                <i class="fas fa-share-alt"></i> OPEN SHARE MENU
+            </a>
         </div>
 
-        <a id="share-link-text" class="share-link" onclick="triggerShareAction()">
-            <i class="fas fa-share-alt"></i> Share File
-        </a>
+        <div id="fallback-share-area" style="display:none; text-align:center; animation: fadeIn 0.5s;">
+            <div style="background:#fff1f2; border:1px solid #fecaca; padding:10px; border-radius:8px; margin-bottom:15px; font-size:11px; color:#be123c;">
+                <i class="fas fa-exclamation-circle"></i> <b>System Sharing Unavailable</b><br>
+                Browser restrictions prevented opening the app menu.
+            </div>
+            
+            <p style="font-size:12px; font-weight:700; margin-bottom:5px;">MANUAL INSTRUCTIONS:</p>
+            <ol style="text-align:left; font-size:12px; color:#334155; padding-left:20px; margin-bottom:15px;">
+                <li>Open your <b>Messenger, Gmail, or Drive</b> app.</li>
+                <li>Create a new message/upload.</li>
+                <li>Attach the file from your <b>Downloads</b> folder.</li>
+            </ol>
+
+            <a href="mailto:?subject=RBI Data Export&body=Attached is the RBI data file." class="btn btn-small btn-ghost" style="text-decoration:none; justify-content:center; color:var(--accent);">
+                <i class="fas fa-envelope"></i> OPEN EMAIL APP
+            </a>
+        </div>
 
         <div style="display:flex; gap:10px; margin-top:25px;">
             <button class="btn btn-ghost" onclick="closeShareModal()">CLOSE</button>
         </div>
     </div>
 </div>
+
+<style> @keyframes fadeIn { from { opacity:0; } to { opacity:1; } } </style>
 
 <div id="location-settings-modal" class="modal-overlay" style="z-index:99999;">
     <div class="modal-box">
@@ -1425,6 +1446,9 @@ function exportData(format) {
             // Only show share prompt if single file (to avoid spamming modals on "Both")
             setTimeout(() => {
                 document.getElementById('share-modal').style.display = 'flex';
+                // Reset to standard view
+                document.getElementById('standard-share-area').style.display = 'block';
+                document.getElementById('fallback-share-area').style.display = 'none';
             }, 500);
 
         } catch (e) {
@@ -1444,30 +1468,23 @@ async function triggerShareAction() {
     const shareData = {
         files: [currentExportFile],
         title: 'RBI Export',
-        text: 'RBI Data Export File' // Short text to avoid issues on some platforms
+        text: 'RBI Data Export File'
     };
 
     // Robust Share Logic
     try {
-        // Try sharing directly (skipping canShare check which is flaky on some Androids)
         await navigator.share(shareData);
         closeShareModal();
         showToast("Shared successfully!", "success");
     } catch (err) {
-        // If that fails, try the check (fallback logic)
-        if (navigator.canShare && navigator.canShare(shareData)) {
-             try {
-                await navigator.share(shareData);
-             } catch (retryErr) {
-                console.log(retryErr);
-             }
-        }
+        // If sharing fails (common on Desktop/HTTP), switch to fallback UI
+        console.warn("Share failed, showing fallback UI", err);
         
-        console.error("Share failed:", err);
-        if (err.name !== 'AbortError') {
-            showToast("Sharing not supported on this device/browser.", "error");
-        }
-        // Don't close modal on error so they can try again or see the file is downloaded
+        // Hide standard button, show detailed instructions
+        document.getElementById('standard-share-area').style.display = 'none';
+        document.getElementById('fallback-share-area').style.display = 'block';
+        
+        showToast("System sharing unavailable. See manual instructions.", "info");
     }
 }
 
