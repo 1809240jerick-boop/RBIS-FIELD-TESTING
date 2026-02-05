@@ -367,39 +367,23 @@
 <div id="share-modal" class="modal-overlay" style="z-index:99996;">
     <div class="modal-box">
         <div style="color:var(--success); font-size:50px; margin-bottom:15px;"><i class="fas fa-check-circle"></i></div>
-        <h3 style="margin:0;">DOWNLOAD COMPLETE</h3>
-        <p style="font-size:13px; color:#666; margin: 10px 0 10px 0;">File has been saved to your device.</p>
+        <h3 style="margin:0;">FILE READY</h3>
+        <p style="font-size:13px; color:#666; margin: 10px 0 20px 0;">File generated successfully in memory.</p>
         
-        <div id="standard-share-area">
-             <div style="background:#f1f5f9; padding:10px; border-radius:8px; margin-bottom:20px; font-size:11px; color:var(--text-light); text-align:center;">
-                 <i class="fas fa-info-circle"></i> Click below to open System Share (Messenger, Drive, etc)
-            </div>
-            <a id="share-link-text" class="share-link" onclick="triggerShareAction()">
-                <i class="fas fa-share-alt"></i> OPEN SHARE MENU
-            </a>
+        <button class="btn btn-primary" onclick="triggerShareAction()" style="margin-bottom:12px;">
+            <i class="fas fa-share-alt"></i> SHARE VIA APP
+        </button>
+
+        <button class="btn btn-ghost" onclick="downloadDirectly()" style="border:1px solid #cbd5e1;">
+            <i class="fas fa-download"></i> SAVE TO DEVICE
+        </button>
+
+        <div id="share-error-msg" style="display:none; color:var(--danger); font-size:11px; margin-top:15px; padding:10px; background:#fef2f2; border-radius:8px;">
+            <i class="fas fa-exclamation-triangle"></i> <b>Sharing Failed/Blocked.</b><br>
+            Please use "Save to Device" instead.
         </div>
 
-        <div id="fallback-share-area" style="display:none; text-align:center; animation: fadeIn 0.5s;">
-            <div style="background:#fff1f2; border:1px solid #fecaca; padding:10px; border-radius:8px; margin-bottom:15px; font-size:11px; color:#be123c;">
-                <i class="fas fa-exclamation-circle"></i> <b>System Sharing Unavailable</b><br>
-                Browser restrictions prevented opening the app menu.
-            </div>
-            
-            <p style="font-size:12px; font-weight:700; margin-bottom:5px;">MANUAL INSTRUCTIONS:</p>
-            <ol style="text-align:left; font-size:12px; color:#334155; padding-left:20px; margin-bottom:15px;">
-                <li>Open your <b>Messenger, Gmail, or Drive</b> app.</li>
-                <li>Create a new message/upload.</li>
-                <li>Attach the file from your <b>Downloads</b> folder.</li>
-            </ol>
-
-            <a href="mailto:?subject=RBI Data Export&body=Attached is the RBI data file." class="btn btn-small btn-ghost" style="text-decoration:none; justify-content:center; color:var(--accent);">
-                <i class="fas fa-envelope"></i> OPEN EMAIL APP
-            </a>
-        </div>
-
-        <div style="display:flex; gap:10px; margin-top:25px;">
-            <button class="btn btn-ghost" onclick="closeShareModal()">CLOSE</button>
-        </div>
+        <div style="margin-top:20px; font-size:12px; color:#94a3b8; cursor:pointer; text-decoration:underline;" onclick="closeShareModal()">Close</div>
     </div>
 </div>
 
@@ -1353,7 +1337,7 @@ function autoFillMother(inputObj) {
     if(found) { document.getElementById('mLast').value = found[16]; document.getElementById('mFirst').value = found[14]; document.getElementById('mMiddle').value = found[15]; }
 }
 
-// --- NEW EXPORT LOGIC ---
+// --- UPDATED EXPORT LOGIC: GENERATE -> WAIT -> CHOOSE ---
 function openExportModal() {
     if(records.length === 0){ showToast("No records to export.", "error"); return; }
     document.getElementById('export-options-modal').style.display = 'flex';
@@ -1367,7 +1351,7 @@ function processExport(type) {
     closeExportModal();
     if(type === 'BOTH') {
         exportData('RBIS');
-        setTimeout(() => exportData('BIMS'), 1500); // Delay for second download
+        setTimeout(() => exportData('BIMS'), 1500); 
     } else {
         exportData(type);
     }
@@ -1405,7 +1389,7 @@ function getBIMSInstructions() {
 }
 
 function exportData(format) {
-    showLoading(true, `GENERATING ${format}`, "Preparing Download...");
+    showLoading(true, `GENERATING ${format}`, "Preparing File in Memory...");
     
     setTimeout(() => {
         try {
@@ -1419,73 +1403,80 @@ function exportData(format) {
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
             } 
             else if (format === 'BIMS') {
-                // 1. Static Instructions Sheet
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(getBIMSInstructions()), "INSTRUCTIONS");
-                
-                // 2. Filtered Data Sheet (First 17 columns only)
-                const bimsRecords = records.map(r => r.slice(0, 17)); // Drop cols 17+ (Purok, etc)
+                const bimsRecords = records.map(r => r.slice(0, 17));
                 const allData = [HEADERS_BIMS, ...bimsRecords];
                 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(allData), "DATA");
             }
 
+            // GENERATE FILE IN MEMORY ONLY
             const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-            const blob = new Blob([wbout], {type:"application/octet-stream"});
+            const blob = new Blob([wbout], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
             const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
-            // Force Download
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = filename;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-
-            // Save for sharing (only saves the last file generated if downloading both)
+            // STORE IN MEMORY
             currentExportFile = file;
 
             showLoading(false);
             
-            // Only show share prompt if single file (to avoid spamming modals on "Both")
-            setTimeout(() => {
-                document.getElementById('share-modal').style.display = 'flex';
-                // Reset to standard view
-                document.getElementById('standard-share-area').style.display = 'block';
-                document.getElementById('fallback-share-area').style.display = 'none';
-            }, 500);
+            // OPEN DASHBOARD (NO AUTO-DOWNLOAD)
+            document.getElementById('share-modal').style.display = 'flex';
+            document.getElementById('share-error-msg').style.display = 'none';
 
         } catch (e) {
             showLoading(false);
             showToast("Export Error: " + e.message, "error");
         }
-    }, 200);
+    }, 500);
 }
 
+// PRIMARY: TRIGGER SYSTEM SHARE
 async function triggerShareAction() {
-    if(!currentExportFile) {
-        showToast("No file to share.", "error");
+    if(!currentExportFile) return;
+
+    // Check if site is HTTPS (Required for Share API)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        document.getElementById('share-error-msg').innerHTML = "<b>HTTPS Required.</b><br>Share API only works on secure sites.";
+        document.getElementById('share-error-msg').style.display = 'block';
         return;
     }
-    
-    // Explicit Share Data Construction
+
+    if (!navigator.canShare) {
+        document.getElementById('share-error-msg').style.display = 'block';
+        return;
+    }
+
     const shareData = {
         files: [currentExportFile],
         title: 'RBI Export',
-        text: 'RBI Data Export File'
+        text: 'RBI Data File'
     };
 
-    // Robust Share Logic
     try {
         await navigator.share(shareData);
         closeShareModal();
-        showToast("Shared successfully!", "success");
+        showToast("Shared Successfully!", "success");
     } catch (err) {
-        // If sharing fails (common on Desktop/HTTP), switch to fallback UI
-        console.warn("Share failed, showing fallback UI", err);
-        
-        // Hide standard button, show detailed instructions
-        document.getElementById('standard-share-area').style.display = 'none';
-        document.getElementById('fallback-share-area').style.display = 'block';
-        
-        showToast("System sharing unavailable. See manual instructions.", "info");
+        console.log("Share failed/cancelled", err);
+        // If user cancelled, don't show error. If real error, show msg.
+        if (err.name !== 'AbortError') {
+            document.getElementById('share-error-msg').style.display = 'block';
+        }
     }
+}
+
+// SECONDARY: MANUAL DOWNLOAD
+function downloadDirectly() {
+    if(!currentExportFile) return;
+    const url = window.URL.createObjectURL(currentExportFile);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = currentExportFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    closeShareModal();
+    showToast("Saved to Downloads Folder", "success");
 }
 
 function closeShareModal() {
