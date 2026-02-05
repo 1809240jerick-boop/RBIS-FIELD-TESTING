@@ -516,7 +516,16 @@
             <div class="form-group"><label>Civil Status<span class="req">*</span></label>
                 <select id="civilStatus"><option>SINGLE</option><option>MARRIED</option><option>WIDOWED</option><option>SEPARATED</option><option>COMMON LAW/ LIVE-IN</option></select>
             </div>
-            <div class="form-group"><label>Citizenship<span class="req">*</span></label><input id="citizenship" value="FILIPINO"></div>
+            
+            <div class="form-group">
+                <label>Citizenship<span class="req">*</span></label>
+                <select id="citizenshipSelect" onchange="checkCitizenship()">
+                    <option value="FILIPINO">FILIPINO</option>
+                    <option value="FOREIGNER">FOREIGNER</option>
+                </select>
+                <input id="citizenshipOther" placeholder="SPECIFY NATIONALITY..." style="display:none; margin-top:10px; border-color:var(--accent);">
+            </div>
+
             <div class="form-group">
                 <label>Religion (Select/Type Other)<span class="req">*</span></label>
                 <select id="religionSelect" onchange="checkReligion()">
@@ -533,6 +542,15 @@
                 <input id="religionOther" placeholder="TYPE RELIGION HERE..." style="display:none; margin-top:10px; border-color:var(--accent);">
             </div>
             <div class="form-group"><label>Profession / Occupation</label><input id="profession"></div>
+            
+            <div class="form-group">
+                <label>Labor Status</label>
+                <select id="laborStatus">
+                    <option value="EMPLOYED">EMPLOYED</option>
+                    <option value="UNEMPLOYED">UNEMPLOYED</option>
+                    <option value="NOT IN LABOR FORCE">NOT IN LABOR FORCE</option>
+                </select>
+            </div>
         </div>
 
         <div class="card-section">
@@ -561,6 +579,8 @@
                 <div class="toggle-card"><label for="is4Ps">4Ps</label><input type="checkbox" id="is4Ps"></div>
                 <div class="toggle-card"><label for="isIPS">IPs</label><input type="checkbox" id="isIPS"></div>
                 <div class="toggle-card"><label for="isSolo">Solo Parent</label><input type="checkbox" id="isSolo"></div>
+                <div class="toggle-card"><label for="isOFW">OFW</label><input type="checkbox" id="isOFW"></div>
+                <div class="toggle-card"><label for="isISY">ISY</label><input type="checkbox" id="isISY"></div>
             </div>
         </div>
 
@@ -694,7 +714,8 @@ const HEADERS_RBIS = [
     "HIGHEST EDUCATIONAL ATTAINMENT", "MOTHER'S FIRST NAME", 
     "MOTHER'S MIDDLE NAME", "MOTHER'S LAST NAME",
     "PUROK/SITIO", "ADDITIONAL ADDRESS", "RELIGION", 
-    "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT"
+    "IS OSY", "IS PWD", "IS 4Ps", "IS IPS", "IS SOLO PARENT",
+    "LABOR STATUS", "IS OFW", "IS ISY"
 ];
 
 // BIMS Headers (from Sheet 2 Data snippet)
@@ -1053,15 +1074,34 @@ function checkReligion() {
     document.getElementById('religionOther').style.display = (sel.value === 'OTHERS') ? 'block' : 'none';
 }
 
+function checkCitizenship() {
+    const sel = document.getElementById('citizenshipSelect');
+    const input = document.getElementById('citizenshipOther');
+    if(sel.value === 'FOREIGNER') {
+        input.style.display = 'block';
+    } else {
+        input.style.display = 'none';
+    }
+}
+
 function saveRecord(){
-  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'citizenship', 'addressSelect'];
+  const idsToCheck = ['lastName', 'firstName', 'birthPlace', 'birthDate', 'addressSelect'];
   for(let id of idsToCheck) {
       if(!document.getElementById(id).value.trim()) { showToast("FIELD REQUIRED: " + id.toUpperCase(), "error"); return; }
   }
+  
+  // RELIGION LOGIC
   let finalReligion = document.getElementById('religionSelect').value;
   if(finalReligion === 'OTHERS') {
       finalReligion = document.getElementById('religionOther').value.toUpperCase();
       if(!finalReligion) { showToast("SPECIFY RELIGION", "error"); return; }
+  }
+
+  // CITIZENSHIP LOGIC
+  let finalCitizenship = document.getElementById('citizenshipSelect').value;
+  if(finalCitizenship === 'FOREIGNER') {
+      finalCitizenship = document.getElementById('citizenshipOther').value.toUpperCase();
+      if(!finalCitizenship) { showToast("SPECIFY NATIONALITY", "error"); return; }
   }
   
   // FIX: ALWAYS USE CURRENT GLOBAL PUROK FOR SAVING (NEW OR EDIT)
@@ -1072,13 +1112,16 @@ function saveRecord(){
     document.getElementById('firstName').value.toUpperCase(), document.getElementById('middleName').value.toUpperCase(),
     document.getElementById('suffix').value.toUpperCase(), document.getElementById('birthPlace').value.toUpperCase(),
     document.getElementById('birthDate').value, document.getElementById('sex').value, document.getElementById('civilStatus').value,
-    document.getElementById('citizenship').value.toUpperCase(), document.getElementById('profession').value.toUpperCase(), 
+    finalCitizenship, document.getElementById('profession').value.toUpperCase(), 
     document.getElementById('contact').value, "", document.getElementById('education').value,
     document.getElementById('mFirst').value.toUpperCase(), document.getElementById('mMiddle').value.toUpperCase(),
     document.getElementById('mLast').value.toUpperCase(), purokToSave, document.getElementById('addressSelect').value, 
     finalReligion, document.getElementById('isOSY').checked ? "YES" : "NO", document.getElementById('isPWD').checked ? "YES" : "NO",
     document.getElementById('is4Ps').checked ? "YES" : "NO", document.getElementById('isIPS').checked ? "YES" : "NO",
-    document.getElementById('isSolo').checked ? "YES" : "NO"
+    document.getElementById('isSolo').checked ? "YES" : "NO",
+    document.getElementById('laborStatus').value, // NEW
+    document.getElementById('isOFW').checked ? "YES" : "NO", // NEW
+    document.getElementById('isISY').checked ? "YES" : "NO"  // NEW
   ];
 
   if (editingIndex > -1) {
@@ -1092,7 +1135,12 @@ function saveRecord(){
       const currType = document.getElementById('inhabitantType').value;
       const currRel = "ROMAN CATHOLIC"; 
       document.querySelectorAll('input').forEach(i => { if(i.type === 'checkbox') i.checked = false; else i.value = ''; });
-      document.getElementById('inhabitantType').value = currType; document.getElementById('citizenship').value = "FILIPINO";
+      document.getElementById('inhabitantType').value = currType; 
+      
+      // RESET CITIZENSHIP
+      document.getElementById('citizenshipSelect').value = "FILIPINO";
+      checkCitizenship();
+
       document.getElementById('religionSelect').value = currRel; document.getElementById('addressSelect').value = "";
       checkReligion(); document.getElementById('lastName').focus();
   }
@@ -1104,7 +1152,18 @@ function startEdit(index) {
     document.getElementById('firstName').value = r[2]; document.getElementById('middleName').value = r[3];
     document.getElementById('suffix').value = r[4]; document.getElementById('birthPlace').value = r[5];
     document.getElementById('birthDate').value = r[6]; document.getElementById('sex').value = r[7];
-    document.getElementById('civilStatus').value = r[8]; document.getElementById('citizenship').value = r[9];
+    document.getElementById('civilStatus').value = r[8]; 
+    
+    // CITIZENSHIP HANDLING
+    const citVal = r[9];
+    if(citVal === 'FILIPINO') {
+        document.getElementById('citizenshipSelect').value = 'FILIPINO';
+    } else {
+        document.getElementById('citizenshipSelect').value = 'FOREIGNER';
+        document.getElementById('citizenshipOther').value = citVal;
+    }
+    checkCitizenship();
+
     document.getElementById('profession').value = r[10]; document.getElementById('contact').value = r[11];
     document.getElementById('education').value = r[13]; document.getElementById('mFirst').value = r[14];
     document.getElementById('mMiddle').value = r[15]; document.getElementById('mLast').value = r[16];
@@ -1120,6 +1179,11 @@ function startEdit(index) {
     document.getElementById('isOSY').checked = (r[20] === "YES"); document.getElementById('isPWD').checked = (r[21] === "YES");
     document.getElementById('is4Ps').checked = (r[22] === "YES"); document.getElementById('isIPS').checked = (r[23] === "YES");
     document.getElementById('isSolo').checked = (r[24] === "YES");
+    
+    // NEW FIELDS
+    document.getElementById('laborStatus').value = r[25] || "EMPLOYED";
+    document.getElementById('isOFW').checked = (r[26] === "YES");
+    document.getElementById('isISY').checked = (r[27] === "YES");
 
     editingIndex = index;
     document.getElementById('btn-save').innerHTML = '<i class="fas fa-check"></i> UPDATE RECORD';
@@ -1144,7 +1208,8 @@ function cancelEdit() {
     document.getElementById('btn-save').innerHTML = '<i class="fas fa-save"></i> SAVE RECORD';
     document.getElementById('btn-cancel').style.display = "none"; document.getElementById('edit-banner').style.display = "none";
     document.querySelectorAll('input').forEach(i => { if(i.type === 'checkbox') i.checked = false; else i.value = ''; });
-    document.getElementById('addressSelect').value = ""; document.getElementById('citizenship').value = "FILIPINO";
+    document.getElementById('addressSelect').value = ""; 
+    document.getElementById('citizenshipSelect').value = "FILIPINO"; checkCitizenship();
     document.getElementById('religionSelect').value = "ROMAN CATHOLIC"; checkReligion();
 }
 
@@ -1414,10 +1479,8 @@ function exportData(format) {
 
             // GENERATE FILE IN MEMORY ONLY
             const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-            
-            // STRICT EXCEL MIME TYPE
             const blob = new Blob([wbout], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-            const file = new File([blob], filename, {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+            const file = new File([blob], filename, {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 
             // STORE IN MEMORY
             currentExportFile = file;
